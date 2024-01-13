@@ -10,6 +10,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public List<TicketResponseTemplate> TicketResponseTemplates { get; set; } = new List<TicketResponseTemplate>();
     }
 
@@ -23,6 +26,12 @@ namespace mvp.tickets.data.Models
             {
                 s.Property(p => p.Name).IsRequired(true).HasMaxLength(100);
             });
+
+            modelBuilder.Entity<TicketResponseTemplateType>()
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketResponseTemplateTypes)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TicketResponseTemplateType>()
                 .HasIndex(p => p.Name)

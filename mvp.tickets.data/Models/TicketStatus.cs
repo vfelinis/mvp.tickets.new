@@ -37,7 +37,7 @@ namespace mvp.tickets.data.Models
             modelBuilder.Entity<TicketStatus>()
                 .HasIndex(p => p.IsDefault)
                 .IsUnique(true)
-                .HasFilter($"[{nameof(TicketStatus.IsDefault)}] = 1 AND [{nameof(TicketStatus.IsActive)}] = 1");
+                .HasFilter($"\"{nameof(TicketStatus.IsDefault)}\" = true AND \"{nameof(TicketStatus.IsActive)}\" = true");
 
             modelBuilder.Entity<TicketStatus>().ToTable(TableName);
         }

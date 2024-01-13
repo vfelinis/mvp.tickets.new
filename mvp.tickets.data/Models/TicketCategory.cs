@@ -12,6 +12,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public int? ParentCategoryId { get; set; }
         public TicketCategory ParentCategory { get; set; }
 
@@ -34,6 +37,12 @@ namespace mvp.tickets.data.Models
             });
 
             modelBuilder.Entity<TicketCategory>()
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketCategories)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TicketCategory>()
                 .HasOne(c => c.ParentCategory)
                 .WithMany(p => p.SubCategories)
                 .HasForeignKey(c => c.ParentCategoryId)
@@ -46,7 +55,7 @@ namespace mvp.tickets.data.Models
             modelBuilder.Entity<TicketCategory>()
                 .HasIndex(p => p.IsDefault)
                 .IsUnique(true)
-                .HasFilter($"[{nameof(TicketCategory.IsDefault)}] = 1 AND [{nameof(TicketCategory.IsActive)}] = 1");
+                .HasFilter($"\"{nameof(TicketCategory.IsDefault)}\" = true AND \"{nameof(TicketCategory.IsActive)}\" = true");
 
             modelBuilder.Entity<TicketCategory>().ToTable(TableName);
         }

@@ -13,6 +13,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public int ReporterId { get; set; }
         public User Reporter { get; set; }
 
@@ -57,6 +60,12 @@ namespace mvp.tickets.data.Models
                 s.Property(p => p.TicketPriorityId).IsRequired(false);
                 s.Property(p => p.TicketResolutionId).IsRequired(false);
             });
+
+            modelBuilder.Entity<Ticket>()
+                .HasOne(c => c.Company)
+                .WithMany(p => p.Tickets)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Ticket>()
                 .HasOne(c => c.Reporter)

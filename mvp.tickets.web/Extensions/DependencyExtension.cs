@@ -1,6 +1,4 @@
-﻿using Google.Apis.Gmail.v1.Data;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http.Features;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
@@ -53,7 +51,7 @@ namespace mvp.tickets.web.Extensions
             };
             services.AddSingleton<IConnectionStrings>(connectionsStrings);
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionsStrings.DefaultConnection));
+                options.UseNpgsql(connectionsStrings.DefaultConnection));
             services.AddTransient<IUserStore, UserStore>();
             services.AddTransient<ICategoryStore, CategoryStore>();
             #endregion

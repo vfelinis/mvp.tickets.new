@@ -8,7 +8,7 @@ namespace mvp.tickets.data
         public ApplicationDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            optionsBuilder.UseSqlServer(@"Server=localhost;Database=mvp.tickets;Trusted_Connection=True;MultipleActiveResultSets=true");
+            optionsBuilder.UseNpgsql(@"Host=192.168.1.134;Port=5432;Database=tickets;Username=postgres;Password=111111");
             return new ApplicationDbContext(optionsBuilder.Options);
         }
     }

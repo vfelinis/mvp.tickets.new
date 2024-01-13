@@ -33,7 +33,7 @@ namespace mvp.tickets.web.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            while (false && !stoppingToken.IsCancellationRequested)
             {
                 try
                 {

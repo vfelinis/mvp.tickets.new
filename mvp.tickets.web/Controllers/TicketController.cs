@@ -1,7 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
 using mvp.tickets.data.Models;
@@ -11,6 +10,7 @@ using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
+using Npgsql;
 using System.Data;
 using System.Net.Mail;
 using System.Security.Claims;
@@ -55,7 +55,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                using (var connection = new SqlConnection(_connectionStrings.DefaultConnection))
+                using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
                 {
                     DynamicParameters parameter = new DynamicParameters();
                     if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
@@ -149,7 +149,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                using (var connection = new SqlConnection(_connectionStrings.DefaultConnection))
+                using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
                 {
                     DynamicParameters parameter = new DynamicParameters();
                     parameter.Add(TicketsReportProcedure.Params.SearchById, id, DbType.Int32);

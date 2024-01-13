@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data.Models;
 using mvp.tickets.data.Procedures;
@@ -8,6 +7,7 @@ using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Stores;
+using Npgsql;
 using System.Data;
 
 namespace mvp.tickets.data.Stores
@@ -25,7 +25,7 @@ namespace mvp.tickets.data.Stores
 
         public async Task<IBaseQueryResponse<IEnumerable<ICategoryModel>>> Query(ICategoryQueryRequest request)
         {
-            using (var connection = new SqlConnection(_connectionStrings.DefaultConnection))
+            using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
             {
                 DynamicParameters parameter = new DynamicParameters();
                 if (request.Id > 0)
