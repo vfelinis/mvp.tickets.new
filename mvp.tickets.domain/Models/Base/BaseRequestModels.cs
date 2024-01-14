@@ -12,8 +12,14 @@ namespace mvp.tickets.domain.Models
         public int CompantId { get; set; }
     }
 
-    public interface IBaseCommandRequest : IBaseRequest { }
-    public record BaseCommandRequest : BaseRequest, IBaseCommandRequest { }
+    public interface IBaseCommandRequest : IBaseRequest
+    {
+        int CompanyId { get; set; }
+    }
+    public record BaseCommandRequest : BaseRequest, IBaseCommandRequest
+    {
+        public int CompanyId { get; set; }
+    }
 
     public interface IBaseQueryRequest : IBaseRequest { }
     public record BaseQueryRequest : BaseRequest, IBaseQueryRequest { }

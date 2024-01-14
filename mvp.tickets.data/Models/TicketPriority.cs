@@ -37,7 +37,7 @@ namespace mvp.tickets.data.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TicketPriority>()
-                .HasIndex(p => p.Name)
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketPriority>().ToTable(TableName);

@@ -52,12 +52,12 @@ namespace mvp.tickets.data.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<User>()
-                .HasIndex(p => p.Email)
+                .HasIndex(p => new { p.CompanyId, p.Email })
                 .IsUnique(true)
                 .HasFilter($"\"{nameof(User.Email)}\" IS NOT NULL");
 
             modelBuilder.Entity<User>()
-                .HasIndex(p => p.Phone)
+                .HasIndex(p => new { p.CompanyId, p.Phone })
                 .IsUnique(true)
                 .HasFilter($"\"{nameof(User.Phone)}\" IS NOT NULL");
 

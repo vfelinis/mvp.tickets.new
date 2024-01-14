@@ -13,10 +13,9 @@ using mvp.tickets.domain.Models;
 using Npgsql;
 using System.Data;
 using System.Net.Mail;
-using System.Security.Claims;
 using System.Web;
 using Telegram.Bot;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using Telegram.Bot.Types;
 
 namespace mvp.tickets.web.Controllers
 {
@@ -56,13 +55,66 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
                 using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
                 {
                     DynamicParameters parameter = new DynamicParameters();
+                    parameter.Add("@companyId", companyId, DbType.Int32);
+                    var query =
+$@"
+SELECT
+    COUNT(*) OVER() AS ""{nameof(TicketReportModel.Total)}""
+    ,t.""{nameof(Ticket.Id)}"" AS ""{nameof(TicketReportModel.Id)}""
+    ,t.""{nameof(Ticket.Name)}"" AS ""{nameof(TicketReportModel.Name)}""
+    ,t.""{nameof(Ticket.Token)}"" AS ""{nameof(TicketReportModel.Token)}""
+    ,CASE t.""{nameof(Ticket.Source)}""
+        WHEN {(int)TicketSource.Email} THEN 'Email'
+        WHEN {(int)TicketSource.Telegram} THEN 'Telegram'
+        ELSE 'Web'
+    END AS ""{nameof(TicketReportModel.Source)}""
+    ,t.""{nameof(Ticket.IsClosed)}"" AS ""{nameof(TicketReportModel.IsClosed)}""
+    ,t.""{nameof(Ticket.DateCreated)}"" AS ""{nameof(TicketReportModel.DateCreated)}""
+    ,t.""{nameof(Ticket.DateModified)}"" AS ""{nameof(TicketReportModel.DateModified)}""
+
+    ,ru.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.ReporterId)}""
+    ,ru.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.ReporterEmail)}""
+    ,ru.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.ReporterFirstName)}""
+    ,ru.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.ReporterLastName)}""
+
+    ,au.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.AssigneeId)}""
+    ,au.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.AssigneeEmail)}""
+    ,au.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.AssigneeFirstName)}""
+    ,au.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.AssigneeLastName)}""
+            
+    ,tp.""{nameof(TicketPriority.Id)}"" AS ""{nameof(TicketReportModel.TicketPriorityId)}""
+    ,tp.""{nameof(TicketPriority.Name)}"" AS ""{nameof(TicketReportModel.TicketPriority)}""
+            
+    ,tq.""{nameof(TicketQueue.Id)}"" AS ""{nameof(TicketReportModel.TicketQueueId)}""
+    ,tq.""{nameof(TicketQueue.Name)}"" AS ""{nameof(TicketReportModel.TicketQueue)}""
+
+    ,tr.""{nameof(TicketResolution.Id)}"" AS ""{nameof(TicketReportModel.TicketResolutionId)}""
+    ,tr.""{nameof(TicketResolution.Name)}"" AS ""{nameof(TicketReportModel.TicketResolution)}""
+
+    ,ts.""{nameof(TicketStatus.Id)}"" AS ""{nameof(TicketReportModel.TicketStatusId)}""
+    ,ts.""{nameof(TicketStatus.Name)}"" AS ""{nameof(TicketReportModel.TicketStatus)}""
+
+    ,tc.""{nameof(TicketCategory.Id)}"" AS ""{nameof(TicketReportModel.TicketCategoryId)}""
+    ,tc.""{nameof(TicketCategory.Name)}"" AS ""{nameof(TicketReportModel.TicketCategory)}""
+FROM dbo.""{TicketExtension.TableName}"" t
+INNER JOIN dbo.""{UserExtension.TableName}"" ru ON t.""{nameof(Ticket.ReporterId)}"" = ru.""{nameof(data.Models.User.Id)}""
+INNER JOIN dbo.""{TicketQueueExtension.TableName}"" tq ON t.""{nameof(Ticket.TicketQueueId)}"" = tq.""{nameof(TicketQueue.Id)}""
+INNER JOIN dbo.""{TicketStatusExtension.TableName}"" ts ON t.""{nameof(Ticket.TicketStatusId)}"" = ts.""{nameof(TicketStatus.Id)}""
+INNER JOIN dbo.""{TicketCategoryExtension.TableName}"" tc ON t.""{nameof(Ticket.TicketCategoryId)}"" = tc.""{nameof(TicketCategory.Id)}""
+LEFT JOIN dbo.""{UserExtension.TableName}"" au ON t.""{nameof(Ticket.AssigneeId)}"" = au.""{nameof(data.Models.User.Id)}""
+LEFT JOIN dbo.""{TicketPriorityExtension.TableName}"" tp ON t.""{nameof(Ticket.TicketPriorityId)}"" = tp.""{nameof(TicketPriority.Id)}""
+LEFT JOIN dbo.""{TicketResolutionExtension.TableName}"" tr ON t.""{nameof(Ticket.TicketResolutionId)}"" = tr.""{nameof(TicketResolution.Id)}""
+WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
+";
                     if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
                     {
-                        var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-                        parameter.Add(TicketsReportProcedure.Params.SearchByReporterId, userId, DbType.Int32);
+                        var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                        parameter.Add("@searchByReporterId", userId, DbType.Int32);
+                        query += $@" AND t.""{nameof(Ticket.ReporterId)}"" = @searchByReporterId";
                     }
                     if (request.SearchBy?.Any() == true)
                     {
@@ -70,52 +122,61 @@ namespace mvp.tickets.web.Controllers
                         {
                             if (string.Equals(search.Key, nameof(Ticket.Id), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchById, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchById", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.Id)}"" = @searchById";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.IsClosed), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByIsClosed, Convert.ToBoolean(search.Value), DbType.Boolean);
+                                parameter.Add("@searchByIsClosed", Convert.ToBoolean(search.Value), DbType.Boolean);
+                                query += $@" AND t.""{nameof(Ticket.IsClosed)}"" = @searchByIsClosed";
                             }
                             if (User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && string.Equals(search.Key, nameof(Ticket.ReporterId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByReporterId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByReporterId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.ReporterId)}"" = @searchByReporterId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketPriorityId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByTicketPriorityId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByTicketPriorityId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.TicketPriorityId)}"" = @searchByTicketPriorityId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketQueueId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByTicketQueueId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByTicketQueueId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.TicketQueueId)}"" = @searchByTicketQueueId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketResolutionId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByTicketResolutionId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByTicketResolutionId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.TicketResolutionId)}"" = @searchByTicketResolutionId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketStatusId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByTicketStatusId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByTicketStatusId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.TicketStatusId)}"" = @searchByTicketStatusId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketCategoryId), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchByTicketCategoryId, Convert.ToInt32(search.Value), DbType.Int32);
+                                parameter.Add("@searchByTicketCategoryId", Convert.ToInt32(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.TicketCategoryId)}"" = @searchByTicketCategoryId";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.Source), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add(TicketsReportProcedure.Params.SearchBySource, (int)Enum.Parse<TicketSource>(search.Value), DbType.Int32);
+                                parameter.Add("@searchBySource", (int)Enum.Parse<TicketSource>(search.Value), DbType.Int32);
+                                query += $@" AND t.""{nameof(Ticket.Source)}"" = @searchByTicketCategoryId";
                             }
                         }
                     }
 
-                    parameter.Add(TicketsReportProcedure.Params.SortBy, request.SortBy, DbType.String);
-                    parameter.Add(TicketsReportProcedure.Params.SortDirection, request.SortDirection.ToString(), DbType.String);
-                    parameter.Add(TicketsReportProcedure.Params.Offset, request.Offset, DbType.Int32);
-                    parameter.Add(TicketsReportProcedure.Params.Limit, ReportConstants.DEFAULT_LIMIT, DbType.Int32);
+                    parameter.Add("@offset", request.Offset, DbType.Int32);
+                    parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
+                    query +=
+$@"
+ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" ""{request.SortDirection}"" OFFSET @offset LIMIT @limit";
 
-                    var query = await connection.QueryAsync<TicketReportModel>(TicketsReportProcedure.Name, param: parameter,
-                        commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+                    var result = await connection.QueryAsync<TicketReportModel>(query, param: parameter);
 
-                    var entries = query.ToList();
+                    var entries = result.ToList();
                     return new BaseReportQueryResponse<IEnumerable<ITicketModel>>
                     {
                         Data = entries,
@@ -150,20 +211,12 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                DynamicParameters parameter = new DynamicParameters();
-                parameter.Add(TicketsReportProcedure.Params.SearchById, id, DbType.Int32);
-                parameter.Add(TicketsReportProcedure.Params.SortBy, nameof(Ticket.Id), DbType.String);
-                parameter.Add(TicketsReportProcedure.Params.SortDirection, SortDirection.ASC.ToString(), DbType.String);
-                parameter.Add(TicketsReportProcedure.Params.Offset, 0, DbType.Int32);
-                parameter.Add(TicketsReportProcedure.Params.Limit, 1, DbType.Int32);
-
                 var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
                 var includeIternal = User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !request.IsUserView;
                 var entry = await _dbContext.Tickets.AsNoTracking().Where(s => s.Id == id && s.CompanyId == companyId)
                     .Select(s => new TicketModel
                     {
                         Id = s.Id,
-                        CompanyId = s.CompanyId,
                         AssigneeId = s.AssigneeId,
                         AssigneeEmail = s.Assignee.Email,
                         AssigneeFirstName = s.Assignee.FirstName,
@@ -222,7 +275,7 @@ namespace mvp.tickets.web.Controllers
 
                 if (User.Identity.IsAuthenticated)
                 {
-                    var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
+                    var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
                     if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && entry.ReporterId != userId)
                     {
                         return new BaseQueryResponse<ITicketModel>
@@ -298,14 +351,14 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
                 var entry = new Ticket
                 {
                     CompanyId = companyId,
                     Name = HttpUtility.HtmlAttributeEncode(request.Name),
                     IsClosed = false,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
                     ReporterId = userId,
                     TicketQueueId = defaultQueue.Id,
                     TicketStatusId = defaultStatus.Id,
@@ -327,8 +380,8 @@ namespace mvp.tickets.web.Controllers
                         Text = HttpUtility.HtmlAttributeEncode(request.Text),
                         IsInternal = false,
                         IsActive = true,
-                        DateCreated = DateTimeOffset.Now,
-                        DateModified = DateTimeOffset.Now,
+                        DateCreated = DateTimeOffset.UtcNow,
+                        DateModified = DateTimeOffset.UtcNow,
                         CreatorId = userId,
                     };
                     entry.TicketComments.Add(ticketComment);
@@ -341,8 +394,8 @@ namespace mvp.tickets.web.Controllers
                             var ticketCommentAttachment = new TicketCommentAttachment
                             {
                                 TicketComment = ticketComment,
-                                DateCreated = DateTimeOffset.Now,
-                                DateModified = DateTimeOffset.Now,
+                                DateCreated = DateTimeOffset.UtcNow,
+                                DateModified = DateTimeOffset.UtcNow,
                                 IsActive = true,
                                 OriginalFileName = file.FileName,
                                 Extension = ext,
@@ -595,7 +648,7 @@ namespace mvp.tickets.web.Controllers
                 int userId = ticket.ReporterId;
                 if (User.Identity.IsAuthenticated)
                 {
-                    userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
+                    userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
                     if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) || ticket.ReporterId != userId)
                     {
                         return new BaseCommandResponse<int>
@@ -622,8 +675,8 @@ namespace mvp.tickets.web.Controllers
                         Text = !string.IsNullOrWhiteSpace(request.Text) ? HttpUtility.HtmlAttributeEncode(request.Text) : null,
                         IsInternal = request.IsInternal,
                         IsActive = true,
-                        DateCreated = DateTimeOffset.Now,
-                        DateModified = DateTimeOffset.Now,
+                        DateCreated = DateTimeOffset.UtcNow,
+                        DateModified = DateTimeOffset.UtcNow,
                         CreatorId = userId,
                     };
 
@@ -635,8 +688,8 @@ namespace mvp.tickets.web.Controllers
                             var ticketCommentAttachment = new TicketCommentAttachment
                             {
                                 TicketComment = ticketComment,
-                                DateCreated = DateTimeOffset.Now,
-                                DateModified = DateTimeOffset.Now,
+                                DateCreated = DateTimeOffset.UtcNow,
+                                DateModified = DateTimeOffset.UtcNow,
                                 IsActive = true,
                                 OriginalFileName = file.FileName,
                                 Extension = ext,
@@ -679,76 +732,76 @@ namespace mvp.tickets.web.Controllers
             return response;
         }
 
-        [Authorize(Policy = AuthConstants.AdminPolicy)]
-        [HttpPut]
-        public async Task<IBaseCommandResponse<bool>> Update([FromBody] QueueUpdateCommandRequest request)
-        {
-            if (request == null)
-            {
-                return new BaseCommandResponse<bool>
-                {
-                    IsSuccess = false,
-                    Code = ResponseCodes.BadRequest
-                };
-            }
+        //[Authorize(Policy = AuthConstants.AdminPolicy)]
+        //[HttpPut]
+        //public async Task<IBaseCommandResponse<bool>> Update([FromBody] QueueUpdateCommandRequest request)
+        //{
+        //    if (request == null)
+        //    {
+        //        return new BaseCommandResponse<bool>
+        //        {
+        //            IsSuccess = false,
+        //            Code = ResponseCodes.BadRequest
+        //        };
+        //    }
 
-            IBaseCommandResponse<bool> response = default;
+        //    IBaseCommandResponse<bool> response = default;
 
-            try
-            {
-                if (await _dbContext.TicketQueues.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
-                {
-                    return new BaseCommandResponse<bool>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.BadRequest,
-                        ErrorMessage = $"Запись с названием {request.Name} уже существует.",
-                        Data = false
-                    };
-                }
+        //    try
+        //    {
+        //        if (await _dbContext.TicketQueues.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
+        //        {
+        //            return new BaseCommandResponse<bool>
+        //            {
+        //                IsSuccess = false,
+        //                Code = ResponseCodes.BadRequest,
+        //                ErrorMessage = $"Запись с названием {request.Name} уже существует.",
+        //                Data = false
+        //            };
+        //        }
 
-                if (request.IsDefault && await _dbContext.TicketQueues.AnyAsync(s => s.IsDefault && s.Id != request.Id).ConfigureAwait(false))
-                {
-                    return new BaseCommandResponse<bool>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.BadRequest,
-                        ErrorMessage = $"Первичная очередь уже существует.",
-                        Data = false
-                    };
-                }
+        //        if (request.IsDefault && await _dbContext.TicketQueues.AnyAsync(s => s.IsDefault && s.Id != request.Id).ConfigureAwait(false))
+        //        {
+        //            return new BaseCommandResponse<bool>
+        //            {
+        //                IsSuccess = false,
+        //                Code = ResponseCodes.BadRequest,
+        //                ErrorMessage = $"Первичная очередь уже существует.",
+        //                Data = false
+        //            };
+        //        }
 
-                var entry = await _dbContext.TicketQueues.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
-                if (entry == null)
-                {
-                    return new BaseCommandResponse<bool>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.NotFound,
-                        Data = false
-                    };
-                }
+        //        var entry = await _dbContext.TicketQueues.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+        //        if (entry == null)
+        //        {
+        //            return new BaseCommandResponse<bool>
+        //            {
+        //                IsSuccess = false,
+        //                Code = ResponseCodes.NotFound,
+        //                Data = false
+        //            };
+        //        }
 
-                entry.Name = request.Name;
-                entry.IsDefault = request.IsDefault;
-                entry.IsActive = request.IsActive;
-                entry.DateModified = DateTimeOffset.Now;
+        //        entry.Name = request.Name;
+        //        entry.IsDefault = request.IsDefault;
+        //        entry.IsActive = request.IsActive;
+        //        entry.DateModified = DateTimeOffset.Now;
 
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-                response = new BaseCommandResponse<bool>
-                {
-                    IsSuccess = true,
-                    Code = ResponseCodes.Success,
-                    Data = true
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                response = new BaseCommandResponse<bool>();
-                response.HandleException(ex);
-            }
-            return response;
-        }
+        //        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        //        response = new BaseCommandResponse<bool>
+        //        {
+        //            IsSuccess = true,
+        //            Code = ResponseCodes.Success,
+        //            Data = true
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+        //        response = new BaseCommandResponse<bool>();
+        //        response.HandleException(ex);
+        //    }
+        //    return response;
+        //}
     }
 }

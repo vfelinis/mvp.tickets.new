@@ -28,7 +28,6 @@ namespace mvp.tickets.domain.Models
 
     public interface ITicketModel
     {
-        int CompanyId { get; set; }
         int Id { get; set; }
         string Name { get; set; }
         bool IsClosed { get; set; }
@@ -65,7 +64,6 @@ namespace mvp.tickets.domain.Models
 
     public record TicketModel : ITicketModel
     {
-        public int CompanyId { get; set; }
         public int Id { get; set; }
         public string Name { get; set; }
         public string Token { get; set; }

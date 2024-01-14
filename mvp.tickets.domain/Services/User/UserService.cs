@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin.Auth;
+﻿using Google;
 using Microsoft.Extensions.Logging;
 using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
@@ -13,12 +13,14 @@ namespace mvp.tickets.domain.Services
     public class UserService : IUserService
     {
         private readonly IUserStore _userStore;
+        private readonly ICompanyStore _companyStore;
         private readonly ILogger<UserService> _logger;
         private readonly ISettings _settings;
 
-        public UserService(IUserStore userStore, ILogger<UserService> logger, ISettings settings)
+        public UserService(IUserStore userStore, ICompanyStore companyStore, ILogger<UserService> logger, ISettings settings)
         {
             _userStore = userStore;
+            _companyStore = companyStore;
             _logger = logger;
             _settings = settings;
         }
@@ -64,9 +66,21 @@ namespace mvp.tickets.domain.Services
 
             try
             {
+                
+                var company = await _companyStore.Get(new CompanyQueryRequest { Host = request.Host });
+                if (company == null)
+                {
+                    return new BaseCommandResponse<(IUserModel user, List<Claim> claims)>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Host is unknown."
+                    };
+                }
+
                 var email = request.Email;
                 var password = HashHelper.GetSHA256Hash(request.Password);
-                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password }).ConfigureAwait(false);
+                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password, CompantId = company.Id }).ConfigureAwait(false);
                 IUserModel userModel = userResponse.Data;
                 if (userResponse.Code == ResponseCodes.NotFound)
                 {

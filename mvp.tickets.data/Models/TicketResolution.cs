@@ -34,7 +34,7 @@ namespace mvp.tickets.data.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TicketResolution>()
-                .HasIndex(p => p.Name)
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketResolution>().ToTable(TableName);

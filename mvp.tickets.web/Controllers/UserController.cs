@@ -9,6 +9,7 @@ using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
+using mvp.tickets.web.Extensions;
 using System.Security.Claims;
 
 namespace mvp.tickets.web.Controllers
@@ -21,13 +22,15 @@ namespace mvp.tickets.web.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly ISettings _settings;
         private readonly ILogger<UserController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public UserController(IUserService userService, ApplicationDbContext dbContext, ISettings settings, ILogger<UserController> logger)
+        public UserController(IUserService userService, ApplicationDbContext dbContext, ISettings settings, ILogger<UserController> logger, IWebHostEnvironment env)
         {
             _userService = userService;
             _dbContext = dbContext;
             _settings = settings;
             _logger = logger;
+            _env = env;
         }
 
         [HttpPost("current")]
@@ -36,7 +39,8 @@ namespace mvp.tickets.web.Controllers
             if (User.Identity.IsAuthenticated)
             {
                 var id = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-                var response = await _userService.Query(new UserQueryRequest { Id = id });
+                var compantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var response = await _userService.Query(new UserQueryRequest { Id = id, CompantId = compantId });
                 return response;
             }
             else
@@ -53,6 +57,15 @@ namespace mvp.tickets.web.Controllers
         [HttpPost("login")]
         public async Task<IBaseCommandResponse<IUserModel>> Login(UserLoginCommandRequest request)
         {
+            if (request != null)
+            {
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+                request.Host = host;
+            }
             var response = await _userService.Login(request);
             if (response.IsSuccess)
             {
@@ -83,6 +96,10 @@ namespace mvp.tickets.web.Controllers
         [HttpPost("report")]
         public async Task<IBaseReportQueryResponse<IEnumerable<IUserModel>>> GetReport(BaseReportQueryRequest request)
         {
+            if (request != null)
+            {
+                request.CompantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            }
             return await _userService.GetReport(request);
         }
 
@@ -90,11 +107,12 @@ namespace mvp.tickets.web.Controllers
         [HttpGet("{id}")]
         public async Task<IBaseQueryResponse<IUserModel>> Get(int id)
         {
+            var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             IBaseQueryResponse<IUserModel> response = default;
             try
             {
                 var user = await _dbContext.Users
-                    .Where(s => s.Id == id)
+                    .Where(s => s.Id == id && s.CompanyId == companyId)
                     .Select(s => new UserModel
                     {
                         Id = id,
@@ -104,7 +122,8 @@ namespace mvp.tickets.web.Controllers
                         Permissions = s.Permissions,
                         IsLocked = s.IsLocked,
                         DateCreated = s.DateCreated,
-                        DateModified = s.DateModified
+                        DateModified = s.DateModified,
+                        CompanyId = companyId
                     }).FirstOrDefaultAsync();
 
                 response = user != null
@@ -147,8 +166,9 @@ namespace mvp.tickets.web.Controllers
             IBaseCommandResponse<int> response = default;
             try
             {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
                 var email = request.Email.ToLower();
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == companyId);
                 if (user != null)
                 {
                     return new BaseCommandResponse<int>
@@ -166,8 +186,10 @@ namespace mvp.tickets.web.Controllers
                     LastName = request.LastName,
                     Permissions = request.Permissions,
                     IsLocked = request.IsLocked,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                    CompanyId = companyId,
+                    Password = HashHelper.GetSHA256Hash(request.Password),
                 };
                 await _dbContext.Users.AddAsync(user);
                 await _dbContext.SaveChangesAsync();
@@ -177,23 +199,6 @@ namespace mvp.tickets.web.Controllers
                     Code = domain.Enums.ResponseCodes.Success,
                     Data = user.Id
                 };
-
-                try
-                {
-                    var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                    await firebaseAuth.CreateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-                    {
-                        Email = user.Email,
-                        DisplayName = $"{user.FirstName} {user.LastName}",
-                        Password = !string.IsNullOrWhiteSpace(request.Password)
-                            ? request.Password
-                            : Guid.NewGuid().ToString()
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, ex.Message);
-                }
             }
             catch (Exception ex)
             {
@@ -221,7 +226,8 @@ namespace mvp.tickets.web.Controllers
             IBaseCommandResponse<bool> response = default;
             try
             {
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Id == request.Id);
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == companyId);
                 if (user == null)
                 {
                     return new BaseCommandResponse<bool>
@@ -234,7 +240,7 @@ namespace mvp.tickets.web.Controllers
 
                 var email = request.Email.ToLower();
                 var oldEmail = user.Email;
-                if (oldEmail != email && await _dbContext.Users.AnyAsync(s => s.Email == email && s.Id != request.Id))
+                if (oldEmail != email && await _dbContext.Users.AnyAsync(s => s.Email == email && s.Id != request.Id && s.CompanyId == companyId))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -249,7 +255,11 @@ namespace mvp.tickets.web.Controllers
                 user.LastName = request.LastName;
                 user.Permissions = request.Permissions;
                 user.IsLocked = request.IsLocked;
-                user.DateModified = DateTimeOffset.Now;
+                user.DateModified = DateTimeOffset.UtcNow;
+                if (!string.IsNullOrWhiteSpace(request.Password))
+                {
+                    user.Password = HashHelper.GetSHA256Hash(request.Password);
+                }
 
                 await _dbContext.SaveChangesAsync();
 
@@ -259,30 +269,6 @@ namespace mvp.tickets.web.Controllers
                     Code = domain.Enums.ResponseCodes.Success,
                     Data = true
                 };
-
-                if (oldEmail != email || !string.IsNullOrWhiteSpace(request.Password))
-                {
-                    try
-                    {
-                        var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                        var fbUser = await firebaseAuth.GetUserByEmailAsync(oldEmail);
-                        if (fbUser != null)
-                        {
-                            await firebaseAuth.UpdateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-                            {
-                                Uid = fbUser.Uid,
-                                Email = email,
-                                Password = !string.IsNullOrWhiteSpace(request.Password)
-                                    ? request.Password
-                                    : null
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, ex.Message);
-                    }
-                }
             }
             catch (Exception ex)
             {

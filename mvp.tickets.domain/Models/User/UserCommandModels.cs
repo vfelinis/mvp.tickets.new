@@ -12,6 +12,7 @@ namespace mvp.tickets.domain.Models
     {
         string Email { get; set; }
         string Password { get; set; }
+        string Host { get; set; }
     }
     public record UserLoginCommandRequest: BaseCommandRequest, IUserLoginCommandRequest
     {
@@ -19,6 +20,7 @@ namespace mvp.tickets.domain.Models
         public string Email { get; set; }
         [Required]
         public string Password { get; set; }
+        public string Host { get; set; }
     }
 
     public interface IUserCreateCommandRequest : IBaseCommandRequest

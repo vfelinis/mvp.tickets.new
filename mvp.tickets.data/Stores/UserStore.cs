@@ -32,8 +32,9 @@ namespace mvp.tickets.data.Stores
                 LastName = request.LastName,
                 IsLocked = request.IsLocked,
                 Permissions = request.Permissions,
-                DateCreated = DateTimeOffset.Now,
-                DateModified = DateTimeOffset.Now
+                DateCreated = DateTimeOffset.UtcNow,
+                DateModified = DateTimeOffset.UtcNow,
+                CompanyId = request.CompanyId,
             };
             await _dbContext.Users.AddAsync(user).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
@@ -49,6 +50,7 @@ namespace mvp.tickets.data.Stores
                     Permissions = user.Permissions,
                     DateCreated = user.DateCreated,
                     DateModified = user.DateModified,
+                    CompanyId = user.CompanyId,
                 },
                 IsSuccess = true,
                 Code = ResponseCodes.Success
@@ -64,16 +66,16 @@ namespace mvp.tickets.data.Stores
                 if (request.Password != null)
                 {
                     user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()
-                        && s.Password == request.Password).ConfigureAwait(false);
+                        && s.Password == request.Password && s.CompanyId == request.CompantId).ConfigureAwait(false);
                 }
                 else
                 {
-                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()).ConfigureAwait(false);
+                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower() && s.CompanyId == request.CompantId).ConfigureAwait(false);
                 }
             }
             else if (request?.Id != null)
             {
-                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompantId).ConfigureAwait(false);
             }
 
             if (user != null)
@@ -172,7 +174,7 @@ ORDER BY ""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.S
                 return new BaseReportQueryResponse<IEnumerable<IUserModel>>
                 {
                     Data = entries,
-                    Total = result.FirstOrDefault()?.Total ?? 0,
+                    Total = entries.FirstOrDefault()?.Total ?? 0,
                     IsSuccess = true,
                     Code = ResponseCodes.Success
                 };

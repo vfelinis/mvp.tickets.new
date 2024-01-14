@@ -1,8 +1,6 @@
 ﻿using Dapper;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data.Models;
-using mvp.tickets.data.Procedures;
-using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
@@ -75,7 +73,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
 
         public async Task<IBaseCommandResponse<int>> Create(ICategoryCreateCommandRequest request)
         {
-            if (await _dbContext.TicketCategories.AnyAsync(s => s.Name == request.Name).ConfigureAwait(false))
+            if (await _dbContext.TicketCategories.AnyAsync(s => s.Name == request.Name && s.CompanyId == request.CompanyId).ConfigureAwait(false))
             {
                 return new BaseCommandResponse<int>
                 {
@@ -84,7 +82,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
                     ErrorMessage = $"Категория с названием {request.Name} уже существует."
                 };
             }
-            if (request.IsDefault && await _dbContext.TicketCategories.AnyAsync(s => s.IsDefault).ConfigureAwait(false))
+            if (request.IsDefault && await _dbContext.TicketCategories.AnyAsync(s => s.IsDefault && s.CompanyId == request.CompanyId).ConfigureAwait(false))
             {
                 return new BaseCommandResponse<int>
                 {
@@ -101,8 +99,9 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
                 IsActive = request.IsActive,
                 IsRoot = request.ParentCategoryId == null,
                 ParentCategoryId = request.ParentCategoryId,
-                DateCreated = DateTimeOffset.Now,
-                DateModified = DateTimeOffset.Now,
+                DateCreated = DateTimeOffset.UtcNow,
+                DateModified = DateTimeOffset.UtcNow,
+                CompanyId = request.CompanyId,
             };
             await _dbContext.TicketCategories.AddAsync(category).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
@@ -116,7 +115,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
 
         public async Task<IBaseCommandResponse<bool>> Update(ICategoryUpdateCommandRequest request)
         {
-            if (await _dbContext.TicketCategories.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
+            if (await _dbContext.TicketCategories.AnyAsync(s => s.Name == request.Name && s.Id != request.Id && s.CompanyId == request.CompanyId).ConfigureAwait(false))
             {
                 return new BaseCommandResponse<bool>
                 {
@@ -127,7 +126,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
                 };
             }
 
-            if (request.IsDefault && await _dbContext.TicketQueues.AnyAsync(s => s.IsDefault && s.Id != request.Id).ConfigureAwait(false))
+            if (request.IsDefault && await _dbContext.TicketQueues.AnyAsync(s => s.IsDefault && s.Id != request.Id & s.CompanyId == request.CompanyId).ConfigureAwait(false))
             {
                 return new BaseCommandResponse<bool>
                 {
@@ -144,7 +143,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
                 queryable = queryable.Include(s => s.SubCategories);
             }
 
-            var category = await queryable.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+            var category = await queryable.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompanyId).ConfigureAwait(false);
             if (category == null)
             {
                 return new BaseCommandResponse<bool>
@@ -170,7 +169,7 @@ WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
             category.IsActive = request.IsActive;
             category.IsRoot = request.ParentCategoryId == null;
             category.ParentCategoryId = request.ParentCategoryId;
-            category.DateModified = DateTimeOffset.Now;
+            category.DateModified = DateTimeOffset.UtcNow;
 
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             return new BaseCommandResponse<bool>

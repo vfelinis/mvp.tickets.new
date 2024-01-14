@@ -55,6 +55,7 @@ namespace mvp.tickets.web.Extensions
                 options.UseNpgsql(connectionsStrings.DefaultConnection));
             services.AddTransient<IUserStore, UserStore>();
             services.AddTransient<ICategoryStore, CategoryStore>();
+            services.AddTransient<ICompanyStore, CompanyStore>();
             #endregion
 
             #region Domain

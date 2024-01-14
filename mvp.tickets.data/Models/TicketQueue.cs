@@ -37,11 +37,11 @@ namespace mvp.tickets.data.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TicketQueue>()
-                .HasIndex(p => p.Name)
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketQueue>()
-                .HasIndex(p => p.IsDefault)
+                .HasIndex(p => new { p.CompanyId, p.IsDefault })
                 .IsUnique(true)
                 .HasFilter($"\"{nameof(TicketQueue.IsDefault)}\" = true AND \"{nameof(TicketQueue.IsActive)}\" = true");
 
