@@ -41,8 +41,9 @@ app.Use(async (context, next) =>
         if (context.User.Identity.IsAuthenticated)
         {
             var userId = int.Parse(context.User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-            if (!context.User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim)
-                && !path.StartsWith($"{TicketConstants.AttachmentFolder}/{userId}/"))
+            var companyId = int.Parse(context.User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            if (!(path.StartsWith($"{TicketConstants.AttachmentFolder}/{companyId}/") && context.User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
+                && !path.StartsWith($"{TicketConstants.AttachmentFolder}/{companyId}/{userId}/"))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized");

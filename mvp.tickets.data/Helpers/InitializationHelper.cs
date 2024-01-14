@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using mvp.tickets.data.Models;
 using mvp.tickets.data.Procedures;
+using mvp.tickets.domain.Constants;
+using mvp.tickets.domain.Helpers;
 using System.Reflection;
 
 namespace mvp.tickets.data.Helpers
@@ -21,20 +23,38 @@ namespace mvp.tickets.data.Helpers
                     var context = services.GetRequiredService<ApplicationDbContext>();
                     context.Database.Migrate();
 
-                    //if (!context.Users.Any(s => s.Email == "tickets@mvp-stack.ru"))
-                    //{
-                    //    context.Users.Add(new User
-                    //    {
-                    //        Email = "tickets@mvp-stack.ru",
-                    //        FirstName = "Admin",
-                    //        LastName = "Admin",
-                    //        IsLocked = false,
-                    //        Permissions = domain.Enums.Permissions.Admin | domain.Enums.Permissions.Employee | domain.Enums.Permissions.User,
-                    //        DateCreated = DateTimeOffset.Now,
-                    //        DateModified = DateTimeOffset.Now
-                    //    });
-                    //    context.SaveChanges();
-                    //}
+                    if (!context.Companies.Any(s => s.IsRoot))
+                    {
+                        context.Companies.Add(new Company
+                        {
+                            IsActive = true,
+                            IsRoot = true,
+                            Host = AppConstants.DefaultHost,
+                            IsDefaultHost = true,
+                            ContactEmail = "",
+                            ContactName = "",
+                            ContactPhone = "",
+                            DateCreated = DateTimeOffset.UtcNow,
+                            DateModified = DateTimeOffset.UtcNow,
+                            Name = "Root",
+                            Users = new List<User>
+                            {
+                                new User
+                                {
+                                    Email = "tickets@mvp-stack.ru",
+                                    FirstName = "Admin",
+                                    LastName = "Admin",
+                                    IsLocked = false,
+                                    Permissions = domain.Enums.Permissions.Admin | domain.Enums.Permissions.Employee | domain.Enums.Permissions.User,
+                                    Phone = "",
+                                    Password = HashHelper.GetSHA256Hash("123456"),
+                                    DateCreated = DateTimeOffset.UtcNow,
+                                    DateModified = DateTimeOffset.UtcNow
+                                }
+                            }
+                        });
+                        context.SaveChanges();
+                    }
 
                     //ProceduresInit(context);
                 }

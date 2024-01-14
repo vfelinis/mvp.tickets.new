@@ -6,12 +6,14 @@ namespace mvp.tickets.domain.Models
     {
         int? Id { get; set; }
         string Email { get; set; }
+        string Password { get; set; }
     }
 
     public record UserQueryRequest: BaseQueryRequest, IUserQueryRequest
     {
         public int? Id { get; set; }
         public string Email { get; set; }
+        public string Password { get; set; }
     }
 
     public interface IUserModel
@@ -24,6 +26,8 @@ namespace mvp.tickets.domain.Models
         bool IsLocked { get; set; }
         DateTimeOffset DateCreated { get; set; }
         DateTimeOffset DateModified { get; set; }
+        int CompanyId { get; set; }
+        bool IsRootCompany { get; set; }
     }
 
     public record UserModel: IUserModel
@@ -36,5 +40,7 @@ namespace mvp.tickets.domain.Models
         public bool IsLocked { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
+        public int CompanyId { get; set; }
+        public bool IsRootCompany { get; set; }
     }
 }

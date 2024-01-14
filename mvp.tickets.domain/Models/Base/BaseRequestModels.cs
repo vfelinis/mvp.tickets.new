@@ -5,9 +5,11 @@ namespace mvp.tickets.domain.Models
 {
     public interface IBaseRequest
     {
+        int CompantId { get; set; }
     }
     public record BaseRequest : IBaseRequest
     {
+        public int CompantId { get; set; }
     }
 
     public interface IBaseCommandRequest : IBaseRequest { }

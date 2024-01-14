@@ -51,7 +51,7 @@ namespace mvp.tickets.domain.Services
 
         public async Task<IBaseCommandResponse<(IUserModel user, List<Claim> claims)>> Login(IUserLoginCommandRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.IdToken))
+            if (string.IsNullOrWhiteSpace(request?.Email) || string.IsNullOrWhiteSpace(request?.Password))
             {
                 return new BaseCommandResponse<(IUserModel user, List<Claim> claims)>
                 {
@@ -64,27 +64,19 @@ namespace mvp.tickets.domain.Services
 
             try
             {
-                var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                FirebaseToken decoded = await firebaseAuth.VerifyIdTokenAsync(request.IdToken);
-                var email = decoded.Claims["email"].ToString().ToLower();
-                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email }).ConfigureAwait(false);
+                var email = request.Email;
+                var password = HashHelper.GetSHA256Hash(request.Password);
+                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password }).ConfigureAwait(false);
                 IUserModel userModel = userResponse.Data;
                 if (userResponse.Code == ResponseCodes.NotFound)
                 {
-                    var name = decoded.Claims.TryGetValue("name", out object val)
-                        ? (string)val
-                        : email.Split('@').First();
-
-                    var createResponse = await _userStore.Create(new UserCreateCommandRequest
+                    return new BaseCommandResponse<(IUserModel user, List<Claim> claims)>
                     {
-                        Email = email,
-                        FirstName = name?.Split(' ').First(),
-                        LastName = name?.Split(' ').Last(),
-                        Permissions = Permissions.User,
-                        IsLocked = false
-                    }).ConfigureAwait(false);
-
-                    userModel = createResponse.Data;
+                        Data = (userModel, new List<Claim>()),
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Неверный электронный адрес или пароль."
+                    };
                 }
                 else if (userModel.IsLocked)
                 {
@@ -100,7 +92,7 @@ namespace mvp.tickets.domain.Services
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Sid, userModel.Id.ToString()),
-                    new Claim(AuthConstants.FirebaseIdClaim, decoded.Uid),
+                    new Claim(AuthConstants.CompanyIdClaim, userModel.CompanyId.ToString()),
                 };
 
                 if (userModel.Permissions.HasFlag(Permissions.Admin))
@@ -114,6 +106,10 @@ namespace mvp.tickets.domain.Services
                 if (userModel.Permissions.HasFlag(Permissions.User))
                 {
                     claims.Add(new Claim(AuthConstants.UserClaim, "true"));
+                }
+                if (userModel.IsRootCompany)
+                {
+                    claims.Add(new Claim(AuthConstants.RootCompanyPolicy, "true"));
                 }
 
                 response = new BaseCommandResponse<(IUserModel user, List<Claim> claims)>

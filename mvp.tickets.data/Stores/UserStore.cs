@@ -61,11 +61,19 @@ namespace mvp.tickets.data.Stores
             User user = default;
             if (request?.Email != null)
             {
-                user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()).ConfigureAwait(false);
+                if (request.Password != null)
+                {
+                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()
+                        && s.Password == request.Password).ConfigureAwait(false);
+                }
+                else
+                {
+                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()).ConfigureAwait(false);
+                }
             }
             else if (request?.Id != null)
             {
-                user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
             }
 
             if (user != null)
@@ -82,6 +90,8 @@ namespace mvp.tickets.data.Stores
                     IsLocked = user.IsLocked,
                     DateCreated = user.DateCreated,
                     DateModified = user.DateModified,
+                    CompanyId = user.CompanyId,
+                    IsRootCompany = user.Company.IsRoot
                 };
             }
             else
@@ -98,50 +108,71 @@ namespace mvp.tickets.data.Stores
             using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
             {
                 DynamicParameters parameter = new DynamicParameters();
+                parameter.Add("@companyId", request.CompantId, DbType.Int32);
+                var query =
+$@"SELECT
+    u.""{nameof(User.Id)}"" AS ""{nameof(UserReportModel.Id)}""
+    ,u.""{nameof(User.Email)}"" AS ""{nameof(UserReportModel.Email)}""
+    ,u.""{nameof(User.FirstName)}"" AS ""{nameof(UserReportModel.FirstName)}""
+    ,u.""{nameof(User.LastName)}"" AS ""{nameof(UserReportModel.LastName)}""
+    ,u.""{nameof(User.Permissions)}"" AS ""{nameof(UserReportModel.Permissions)}""
+    ,u.""{nameof(User.IsLocked)}"" AS ""{nameof(UserReportModel.IsLocked)}""
+    ,u.""{nameof(User.DateCreated)}"" AS ""{nameof(UserReportModel.DateCreated)}""
+    ,u.""{nameof(User.DateModified)}"" AS ""{nameof(UserReportModel.DateModified)}""
+    ,u.""{nameof(User.CompanyId)}"" AS ""{nameof(UserReportModel.CompanyId)}""
+    ,COUNT(*) OVER() AS ""{nameof(UserReportModel.Total)}""
+FROM dbo.""{UserExtension.TableName}"" u
+WHERE u.""{nameof(User.CompanyId)}"" = @companyId";
+                
                 if (request.SearchBy?.Any() == true)
                 {
                     foreach (var search in request.SearchBy.Where(s => !string.IsNullOrWhiteSpace($"{s.Value}")))
                     {
                         if (string.Equals(search.Key, nameof(User.Email), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchByEmal, search.Value, DbType.String);
+                            parameter.Add("@searchByEmal", search.Value.ToLower(), DbType.String);
+                            query += $@" AND ""{nameof(User.Email)}"" = @searchByEmal";
                         }
                         else if (string.Equals(search.Key, nameof(User.FirstName), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchByFirstName, search.Value, DbType.String);
+                            parameter.Add("@searchByFirstName", search.Value, DbType.String);
+                            query += $@" AND ""{nameof(User.FirstName)}"" = @searchByFirstName";
                         }
                         else if (string.Equals(search.Key, nameof(User.LastName), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchByLastName, search.Value, DbType.String);
+                            parameter.Add("@searchByLastName", search.Value, DbType.String);
+                            query += $@" AND ""{nameof(User.LastName)}"" = @searchByLastName";
                         }
                         else if (string.Equals(search.Key, nameof(User.IsLocked), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchByIsLocked, Convert.ToBoolean(search.Value), DbType.Boolean);
+                            parameter.Add("@searchByIsLocked", Convert.ToBoolean(search.Value), DbType.Boolean);
+                            query += $@" AND ""{nameof(User.IsLocked)}"" = @searchByIsLocked";
                         }
                         else if (string.Equals(search.Key, nameof(User.Permissions), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchByPermissions, Convert.ToInt32(search.Value), DbType.Int32);
+                            parameter.Add("@searchByPermissions", Convert.ToInt32(search.Value), DbType.Int32);
+                            query += $@" AND (""{nameof(User.Permissions)}"" & @searchByPermissions) = @searchByPermissions";
                         }
                         else if (string.Equals(search.Key, nameof(User.Id), StringComparison.OrdinalIgnoreCase))
                         {
-                            parameter.Add(UsersReportProcedure.Params.SearchById, Convert.ToInt32(search.Value), DbType.Int32);
+                            parameter.Add("@searchById", Convert.ToInt32(search.Value), DbType.Int32);
+                            query += $@" AND ""{nameof(User.Id)}"" = @searchById";
                         }
                     }
                 }
+
+                parameter.Add("@offset", request.Offset, DbType.Int32);
+                parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
+                query +=
+$@"
+ORDER BY ""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(User.Id)}"" ""{request.SortDirection}"" OFFSET @offset LIMIT @limit";
                 
-                parameter.Add(UsersReportProcedure.Params.SortBy, request.SortBy, DbType.String);
-                parameter.Add(UsersReportProcedure.Params.SortDirection, request.SortDirection.ToString(), DbType.String);
-                parameter.Add(UsersReportProcedure.Params.Offset, request.Offset, DbType.Int32);
-                parameter.Add(UsersReportProcedure.Params.Limit, ReportConstants.DEFAULT_LIMIT, DbType.Int32);
-
-                var query = await connection.QueryAsync<UserReportModel>(UsersReportProcedure.Name, param: parameter,
-                    commandType: CommandType.StoredProcedure).ConfigureAwait(false);
-
-                var entries = query.ToList();
+                var result = await connection.QueryAsync<UserReportModel>(query, param: parameter);
+                var entries = result.ToList();
                 return new BaseReportQueryResponse<IEnumerable<IUserModel>>
                 {
                     Data = entries,
-                    Total = entries.FirstOrDefault()?.Total ?? 0,
+                    Total = result.FirstOrDefault()?.Total ?? 0,
                     IsSuccess = true,
                     Code = ResponseCodes.Success
                 };

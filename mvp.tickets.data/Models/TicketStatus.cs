@@ -12,6 +12,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public List<Ticket> Tickets { get; set; } = new List<Ticket>();
         public List<TicketStatusRule> TicketFromStatusRules { get; set; } = new List<TicketStatusRule>();
         public List<TicketStatusRule> TicketToStatusRules { get; set; } = new List<TicketStatusRule>();
@@ -29,6 +32,12 @@ namespace mvp.tickets.data.Models
             {
                 s.Property(p => p.Name).IsRequired(true).HasMaxLength(100);
             });
+
+            modelBuilder.Entity<TicketStatus>()
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketStatuses)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<TicketStatus>()
                 .HasIndex(p => p.Name)

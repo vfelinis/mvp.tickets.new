@@ -28,16 +28,41 @@ namespace mvp.tickets.data.Stores
             using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
             {
                 DynamicParameters parameter = new DynamicParameters();
+                parameter.Add("@companyId", request.CompantId, DbType.Int32);
+                var query =
+$@"SELECT
+    t1.""{nameof(TicketCategory.Id)}"" AS ""{nameof(CategoryModel.Id)}""
+    ,t1.""{nameof(TicketCategory.Name)}"" AS ""{nameof(CategoryModel.Name)}""
+    ,t1.""{nameof(TicketCategory.IsDefault)}"" AS ""{nameof(CategoryModel.IsDefault)}""
+    ,t1.""{nameof(TicketCategory.IsActive)}"" AS ""{nameof(CategoryModel.IsActive)}""
+    ,t1.""{nameof(TicketCategory.IsRoot)}"" AS ""{nameof(CategoryModel.IsRoot)}""
+    ,t1.""{nameof(TicketCategory.DateCreated)}"" AS ""{nameof(CategoryModel.DateCreated)}""
+    ,t1.""{nameof(TicketCategory.DateModified)}"" AS ""{nameof(CategoryModel.DateModified)}""
+    ,t1.""{nameof(TicketCategory.ParentCategoryId)}"" AS ""{nameof(CategoryModel.ParentCategoryId)}""
+    ,t2.""{nameof(TicketCategory.Name)}"" AS ""{nameof(CategoryModel.ParentCategory)}""
+FROM dbo.""{TicketCategoryExtension.TableName}"" t1
+LEFT JOIN dbo.""{TicketCategoryExtension.TableName}"" t2 ON t1.""{nameof(TicketCategory.ParentCategoryId)}"" = t2.""{nameof(TicketCategory.Id)}""
+WHERE t1.""{nameof(TicketCategory.CompanyId)}"" = @companyId";
+                
                 if (request.Id > 0)
                 {
-                    parameter.Add(GetCategoriesProcedure.Params.Id, request.Id.Value, DbType.Int32);
+                    parameter.Add("@id", request.Id.Value, DbType.Int32);
+                    query += $@" AND t1.""{nameof(TicketCategory.Id)}"" = @id";
                 }
-                parameter.Add(GetCategoriesProcedure.Params.OnlyDefault, request.OnlyDefault, DbType.Boolean);
-                parameter.Add(GetCategoriesProcedure.Params.OnlyActive, request.OnlyActive, DbType.Boolean);
-                parameter.Add(GetCategoriesProcedure.Params.OnlyRoot, request.OnlyRoot, DbType.Boolean);
+                if (request.OnlyDefault)
+                {
+                    query += $@" AND t1.""{nameof(TicketCategory.IsDefault)}"" = true";
+                }
+                if (request.OnlyActive)
+                {
+                    query += $@" AND t1.""{nameof(TicketCategory.IsActive)}"" = true";
+                }
+                if (request.OnlyRoot)
+                {
+                    query += $@" AND t1.""{nameof(TicketCategory.IsRoot)}"" = true";
+                }
 
-                var categories = await connection.QueryAsync<CategoryModel>(GetCategoriesProcedure.Name, param: parameter,
-                    commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+                var categories = await connection.QueryAsync<CategoryModel>(query, param: parameter).ConfigureAwait(false);
 
                 return new BaseQueryResponse<IEnumerable<ICategoryModel>>
                 {

@@ -10,12 +10,15 @@ namespace mvp.tickets.domain.Models
 {
     public interface IUserLoginCommandRequest: IBaseCommandRequest
     {
-        string IdToken { get; set; }
+        string Email { get; set; }
+        string Password { get; set; }
     }
     public record UserLoginCommandRequest: BaseCommandRequest, IUserLoginCommandRequest
     {
         [Required]
-        public string IdToken { get; set; }
+        public string Email { get; set; }
+        [Required]
+        public string Password { get; set; }
     }
 
     public interface IUserCreateCommandRequest : IBaseCommandRequest

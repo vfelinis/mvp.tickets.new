@@ -39,6 +39,7 @@ namespace mvp.tickets.web.Extensions
                 options.AddPolicy(AuthConstants.AdminPolicy, policy => policy.RequireClaim(AuthConstants.AdminClaim));
                 options.AddPolicy(AuthConstants.EmployeePolicy, policy => policy.RequireClaim(AuthConstants.EmployeeClaim));
                 options.AddPolicy(AuthConstants.UserPolicy, policy => policy.RequireClaim(AuthConstants.UserClaim));
+                options.AddPolicy(AuthConstants.RootCompanyPolicy, policy => policy.RequireClaim(AuthConstants.RootCompanyPolicy));
             });
 
             services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, EmailBackgroundSearvice>();

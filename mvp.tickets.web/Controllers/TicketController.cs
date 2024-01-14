@@ -16,6 +16,7 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Web;
 using Telegram.Bot;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace mvp.tickets.web.Controllers
 {
@@ -149,40 +150,80 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
-                {
-                    DynamicParameters parameter = new DynamicParameters();
-                    parameter.Add(TicketsReportProcedure.Params.SearchById, id, DbType.Int32);
-                    parameter.Add(TicketsReportProcedure.Params.SortBy, nameof(Ticket.Id), DbType.String);
-                    parameter.Add(TicketsReportProcedure.Params.SortDirection, SortDirection.ASC.ToString(), DbType.String);
-                    parameter.Add(TicketsReportProcedure.Params.Offset, 0, DbType.Int32);
-                    parameter.Add(TicketsReportProcedure.Params.Limit, 1, DbType.Int32);
+                DynamicParameters parameter = new DynamicParameters();
+                parameter.Add(TicketsReportProcedure.Params.SearchById, id, DbType.Int32);
+                parameter.Add(TicketsReportProcedure.Params.SortBy, nameof(Ticket.Id), DbType.String);
+                parameter.Add(TicketsReportProcedure.Params.SortDirection, SortDirection.ASC.ToString(), DbType.String);
+                parameter.Add(TicketsReportProcedure.Params.Offset, 0, DbType.Int32);
+                parameter.Add(TicketsReportProcedure.Params.Limit, 1, DbType.Int32);
 
-                    var entry = await connection.QueryFirstOrDefaultAsync<TicketReportModel>(TicketsReportProcedure.Name, param: parameter,
-                        commandType: CommandType.StoredProcedure).ConfigureAwait(false);
-
-                    if (entry == null)
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var includeIternal = User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !request.IsUserView;
+                var entry = await _dbContext.Tickets.AsNoTracking().Where(s => s.Id == id && s.CompanyId == companyId)
+                    .Select(s => new TicketModel
                     {
-                        return new BaseQueryResponse<ITicketModel>
-                        {
-                            IsSuccess = false,
-                            Code = ResponseCodes.NotFound
-                        };
-                    }
-
-                    if (User.Identity.IsAuthenticated)
-                    {
-                        var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-                        if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && entry.ReporterId != userId)
-                        {
-                            return new BaseQueryResponse<ITicketModel>
+                        Id = s.Id,
+                        CompanyId = s.CompanyId,
+                        AssigneeId = s.AssigneeId,
+                        AssigneeEmail = s.Assignee.Email,
+                        AssigneeFirstName = s.Assignee.FirstName,
+                        AssigneeLastName = s.Assignee.LastName,
+                        IsClosed = s.IsClosed,
+                        DateCreated = s.DateCreated,
+                        DateModified = s.DateModified,
+                        Name = s.Name,
+                        ReporterId = s.ReporterId,
+                        ReporterEmail = s.Reporter.Email,
+                        ReporterFirstName = s.Reporter.FirstName,
+                        ReporterLastName = s.Reporter.LastName,
+                        Source = s.Source.ToString(),
+                        TicketCategoryId = s.TicketCategoryId,
+                        TicketCategory = s.TicketCategory.Name,
+                        TicketPriorityId = s.TicketPriorityId,
+                        TicketPriority = s.TicketPriority.Name,
+                        TicketQueueId = s.TicketQueueId,
+                        TicketQueue = s.TicketQueue.Name,
+                        TicketResolutionId = s.TicketResolutionId,
+                        TicketResolution = s.TicketResolution.Name,
+                        TicketStatusId = s.TicketStatusId,
+                        TicketStatus = s.TicketStatus.Name,
+                        Token = s.Token,
+                        TicketComments = s.TicketComments
+                            .Where(c => c.IsActive && (includeIternal || !c.IsInternal))
+                            .Select(c => new TicketCommentModel
                             {
-                                IsSuccess = false,
-                                Code = ResponseCodes.Unauthorized
-                            };
-                        }
-                    }
-                    else if (entry.Token != request?.Token)
+                                Id = c.Id,
+                                Text = c.Text,
+                                IsInternal = c.IsInternal,
+                                CreatorId = c.CreatorId,
+                                CreatorEmail = c.Creator.Email,
+                                CreatorFirstName = c.Creator.FirstName,
+                                CreatorLastName = c.Creator.LastName,
+                                DateCreated = c.DateCreated,
+                                DateModified = c.DateModified,
+                                TicketCommentAttachmentModels = c.TicketCommentAttachments.Where(x => x.IsActive).Select(x => new TicketCommentAttachmentModel
+                                {
+                                    Id = x.Id,
+                                    DateCreated = x.DateCreated,
+                                    OriginalFileName = x.OriginalFileName,
+                                    Path = $"/{TicketConstants.AttachmentFolder}/{s.CompanyId}/{c.CreatorId}/{x.FileName + "." + x.Extension}"
+                                }).ToList()
+                            }).ToList()
+                    }).FirstOrDefaultAsync();
+
+                if (entry == null)
+                {
+                    return new BaseQueryResponse<ITicketModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.NotFound
+                    };
+                }
+
+                if (User.Identity.IsAuthenticated)
+                {
+                    var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
+                    if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && entry.ReporterId != userId)
                     {
                         return new BaseQueryResponse<ITicketModel>
                         {
@@ -190,38 +231,22 @@ namespace mvp.tickets.web.Controllers
                             Code = ResponseCodes.Unauthorized
                         };
                     }
-
-                    var includeIternal = User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !request.IsUserView;
-                    entry.TicketComments = await _dbContext.TicketComments
-                        .Where(s => s.TicketId == entry.Id && s.IsActive && (includeIternal || !s.IsInternal))
-                        .Select(s => new TicketCommentModel
-                        {
-                            Id = s.Id,
-                            Text = s.Text,
-                            IsInternal = s.IsInternal,
-                            CreatorId = s.CreatorId,
-                            CreatorEmail = s.Creator.Email,
-                            CreatorFirstName = s.Creator.FirstName,
-                            CreatorLastName = s.Creator.LastName,
-                            DateCreated = s.DateCreated,
-                            DateModified = s.DateModified,
-                            TicketCommentAttachmentModels = s.TicketCommentAttachments.Where(x => x.IsActive).Select(x => new TicketCommentAttachmentModel
-                            {
-                                Id = x.Id,
-                                DateCreated = x.DateCreated,
-                                OriginalFileName = x.OriginalFileName,
-                                Path = $"/{TicketConstants.AttachmentFolder}/{s.CreatorId}/{x.FileName + "." + x.Extension}"
-                            }).ToList()
-                        })
-                        .ToListAsync();
-
+                }
+                else if (entry.Token != request?.Token)
+                {
                     return new BaseQueryResponse<ITicketModel>
                     {
-                        Data = entry,
-                        IsSuccess = true,
-                        Code = ResponseCodes.Success
+                        IsSuccess = false,
+                        Code = ResponseCodes.Unauthorized
                     };
                 }
+
+                return new BaseQueryResponse<ITicketModel>
+                {
+                    Data = entry,
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success
+                };
             }
             catch (Exception ex)
             {
@@ -250,7 +275,8 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault && s.CompanyId == companyId);
                 if (defaultQueue == null)
                 {
                     return new BaseCommandResponse<int>
@@ -261,7 +287,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
+                var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault && s.CompanyId == companyId);
                 if (defaultStatus == null)
                 {
                     return new BaseCommandResponse<int>
@@ -275,6 +301,7 @@ namespace mvp.tickets.web.Controllers
                 var userId = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
                 var entry = new Ticket
                 {
+                    CompanyId = companyId,
                     Name = HttpUtility.HtmlAttributeEncode(request.Name),
                     IsClosed = false,
                     DateCreated = DateTimeOffset.Now,
@@ -323,7 +350,7 @@ namespace mvp.tickets.web.Controllers
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {
@@ -351,183 +378,183 @@ namespace mvp.tickets.web.Controllers
             return response;
         }
 
-        [HttpPost("telegram")]
-        public async Task<IActionResult> CreateByTelegram([FromBody] TicketCreateByTelegramCommandRequest request)
-        {
-            if (request == null || request.ApiKey != _settings.ApiKey)
-            {
-                return BadRequest();
-            }
+        //[HttpPost("telegram")]
+        //public async Task<IActionResult> CreateByTelegram([FromBody] TicketCreateByTelegramCommandRequest request)
+        //{
+        //    if (request == null || request.ApiKey != _settings.ApiKey)
+        //    {
+        //        return BadRequest();
+        //    }
 
-            try
-            {
-                var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-                if (defaultQueue == null)
-                {
-                    return BadRequest();
-                }
+        //    try
+        //    {
+        //        var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
+        //        if (defaultQueue == null)
+        //        {
+        //            return BadRequest();
+        //        }
 
-                var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-                if (defaultStatus == null)
-                {
-                    return BadRequest();
-                }
+        //        var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
+        //        if (defaultStatus == null)
+        //        {
+        //            return BadRequest();
+        //        }
 
-                var defaultCategory = await _dbContext.TicketCategories.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-                if (defaultCategory == null)
-                {
-                    return BadRequest();
-                }
+        //        var defaultCategory = await _dbContext.TicketCategories.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
+        //        if (defaultCategory == null)
+        //        {
+        //            return BadRequest();
+        //        }
 
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
-                if (user == null)
-                {
-                    user = new User
-                    {
-                        Phone = request.Phone,
-                        Email = null,
-                        FirstName = request.FirstName ?? request.Phone,
-                        LastName = request.LastName ?? "",
-                        Permissions = domain.Enums.Permissions.User,
-                        IsLocked = false,
-                        DateCreated = DateTimeOffset.Now,
-                        DateModified = DateTimeOffset.Now
-                    };
-                    await _dbContext.Users.AddAsync(user);
-                    await _dbContext.SaveChangesAsync();
+        //        var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
+        //        if (user == null)
+        //        {
+        //            user = new User
+        //            {
+        //                Phone = request.Phone,
+        //                Email = null,
+        //                FirstName = request.FirstName ?? request.Phone,
+        //                LastName = request.LastName ?? "",
+        //                Permissions = domain.Enums.Permissions.User,
+        //                IsLocked = false,
+        //                DateCreated = DateTimeOffset.Now,
+        //                DateModified = DateTimeOffset.Now
+        //            };
+        //            await _dbContext.Users.AddAsync(user);
+        //            await _dbContext.SaveChangesAsync();
 
-                    try
-                    {
-                        var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                        await firebaseAuth.CreateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-                        {
-                            PhoneNumber = request.Phone,
-                            DisplayName = request.Phone,
-                            Password = Guid.NewGuid().ToString()
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, ex.Message);
-                    }
-                }
+        //            try
+        //            {
+        //                var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
+        //                await firebaseAuth.CreateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
+        //                {
+        //                    PhoneNumber = request.Phone,
+        //                    DisplayName = request.Phone,
+        //                    Password = Guid.NewGuid().ToString()
+        //                });
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                _logger.LogError(ex, ex.Message);
+        //            }
+        //        }
 
-                if (user.IsLocked)
-                {
-                    return BadRequest();
-                }
+        //        if (user.IsLocked)
+        //        {
+        //            return BadRequest();
+        //        }
 
-                var entry = new Ticket
-                {
-                    Name = HttpUtility.HtmlAttributeEncode(request.Name),
-                    Token = Guid.NewGuid().ToString(),
-                    Source = TicketSource.Telegram,
-                    IsClosed = false,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now,
-                    ReporterId = user.Id,
-                    TicketQueueId = defaultQueue.Id,
-                    TicketStatusId = defaultStatus.Id,
-                    TicketCategoryId = defaultCategory.Id,
-                    TicketObservations = new List<TicketObservation>
-                    {
-                        new TicketObservation
-                        {
-                            DateCreated = DateTimeOffset.Now,
-                            UserId = user.Id
-                        }
-                    }
-                };
-                if (!string.IsNullOrWhiteSpace(request.Text) || request.Files?.Any() == true)
-                {
-                    var ticketComment = new TicketComment
-                    {
-                        Ticket = entry,
-                        Text = HttpUtility.HtmlAttributeEncode(request.Text),
-                        IsInternal = false,
-                        IsActive = true,
-                        DateCreated = DateTimeOffset.Now,
-                        DateModified = DateTimeOffset.Now,
-                        CreatorId = user.Id,
-                    };
-                    entry.TicketComments.Add(ticketComment);
+        //        var entry = new Ticket
+        //        {
+        //            Name = HttpUtility.HtmlAttributeEncode(request.Name),
+        //            Token = Guid.NewGuid().ToString(),
+        //            Source = TicketSource.Telegram,
+        //            IsClosed = false,
+        //            DateCreated = DateTimeOffset.Now,
+        //            DateModified = DateTimeOffset.Now,
+        //            ReporterId = user.Id,
+        //            TicketQueueId = defaultQueue.Id,
+        //            TicketStatusId = defaultStatus.Id,
+        //            TicketCategoryId = defaultCategory.Id,
+        //            TicketObservations = new List<TicketObservation>
+        //            {
+        //                new TicketObservation
+        //                {
+        //                    DateCreated = DateTimeOffset.Now,
+        //                    UserId = user.Id
+        //                }
+        //            }
+        //        };
+        //        if (!string.IsNullOrWhiteSpace(request.Text) || request.Files?.Any() == true)
+        //        {
+        //            var ticketComment = new TicketComment
+        //            {
+        //                Ticket = entry,
+        //                Text = HttpUtility.HtmlAttributeEncode(request.Text),
+        //                IsInternal = false,
+        //                IsActive = true,
+        //                DateCreated = DateTimeOffset.Now,
+        //                DateModified = DateTimeOffset.Now,
+        //                CreatorId = user.Id,
+        //            };
+        //            entry.TicketComments.Add(ticketComment);
 
-                    if (request.Files?.Any() == true)
-                    {
-                        var botClient = new TelegramBotClient(_settings.TelegramToken);
-                        foreach (var file in request.Files)
-                        {
-                            using var fileStream = new MemoryStream();
-                            var fileInfo = await botClient.GetInfoAndDownloadFileAsync(
-                                fileId: file,
-                                destination: fileStream,
-                                cancellationToken: CancellationToken.None);
+        //            if (request.Files?.Any() == true)
+        //            {
+        //                var botClient = new TelegramBotClient(_settings.TelegramToken);
+        //                foreach (var file in request.Files)
+        //                {
+        //                    using var fileStream = new MemoryStream();
+        //                    var fileInfo = await botClient.GetInfoAndDownloadFileAsync(
+        //                        fileId: file,
+        //                        destination: fileStream,
+        //                        cancellationToken: CancellationToken.None);
 
-                            var fileName = Path.GetFileName(fileInfo.FilePath);
-                            var ext = Path.GetExtension(fileName).Trim('.').ToLower();
-                            var ticketCommentAttachment = new TicketCommentAttachment
-                            {
-                                TicketComment = ticketComment,
-                                DateCreated = DateTimeOffset.Now,
-                                DateModified = DateTimeOffset.Now,
-                                IsActive = true,
-                                OriginalFileName = fileName,
-                                Extension = ext,
-                                FileName = Guid.NewGuid().ToString()
-                            };
-                            ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
+        //                    var fileName = Path.GetFileName(fileInfo.FilePath);
+        //                    var ext = Path.GetExtension(fileName).Trim('.').ToLower();
+        //                    var ticketCommentAttachment = new TicketCommentAttachment
+        //                    {
+        //                        TicketComment = ticketComment,
+        //                        DateCreated = DateTimeOffset.Now,
+        //                        DateModified = DateTimeOffset.Now,
+        //                        IsActive = true,
+        //                        OriginalFileName = fileName,
+        //                        Extension = ext,
+        //                        FileName = Guid.NewGuid().ToString()
+        //                    };
+        //                    ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
-                            Directory.CreateDirectory(Path.GetDirectoryName(path));
-                            using (var stream = System.IO.File.Create(path))
-                            {
-                                fileStream.Seek(0, SeekOrigin.Begin);
-                                await fileStream.CopyToAsync(stream);
-                            }
-                        }
-                    }
-                }
+        //                    var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+        //                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+        //                    using (var stream = System.IO.File.Create(path))
+        //                    {
+        //                        fileStream.Seek(0, SeekOrigin.Begin);
+        //                        await fileStream.CopyToAsync(stream);
+        //                    }
+        //                }
+        //            }
+        //        }
 
-                await _dbContext.Tickets.AddAsync(entry).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+        //        await _dbContext.Tickets.AddAsync(entry).ConfigureAwait(false);
+        //        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
-                var link = $"https://{_settings.Host}/tickets/{entry.Id}/alt/?token={entry.Token}";
-                return Ok(new { link });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return BadRequest();
-            }
-        }
+        //        var link = $"https://{_settings.Host}/tickets/{entry.Id}/alt/?token={entry.Token}";
+        //        return Ok(new { link });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+        //        return BadRequest();
+        //    }
+        //}
 
-        [HttpPost("telegram/list")]
-        public async Task<IActionResult> ListByTelegram([FromBody] TicketTelegramQueryRequest request)
-        {
-            if (request == null || request.ApiKey != _settings.ApiKey)
-            {
-                return BadRequest();
-            }
+        //[HttpPost("telegram/list")]
+        //public async Task<IActionResult> ListByTelegram([FromBody] TicketTelegramQueryRequest request)
+        //{
+        //    if (request == null || request.ApiKey != _settings.ApiKey)
+        //    {
+        //        return BadRequest();
+        //    }
 
-            try
-            {
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
-                if (user == null || user.IsLocked)
-                {
-                    return BadRequest();
-                }
+        //    try
+        //    {
+        //        var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
+        //        if (user == null || user.IsLocked)
+        //        {
+        //            return BadRequest();
+        //        }
 
-                var tickets = await _dbContext.Tickets.AsNoTracking().Where(s => s.ReporterId == user.Id && s.Source == TicketSource.Telegram)
-                    .OrderByDescending(s => s.DateCreated).Take(10).ToListAsync();
+        //        var tickets = await _dbContext.Tickets.AsNoTracking().Where(s => s.ReporterId == user.Id && s.Source == TicketSource.Telegram)
+        //            .OrderByDescending(s => s.DateCreated).Take(10).ToListAsync();
 
-                return Ok(new { data = tickets.Select(s => new { name = s.Name, dateCreated = s.DateCreated, link = $"https://{_settings.Host}/tickets/{s.Id}/alt/?token={s.Token}" }) });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return BadRequest();
-            }
-        }
+        //        return Ok(new { data = tickets.Select(s => new { name = s.Name, dateCreated = s.DateCreated, link = $"https://{_settings.Host}/tickets/{s.Id}/alt/?token={s.Token}" }) });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+        //        return BadRequest();
+        //    }
+        //}
 
         [HttpPost("{id}/comments")]
         public async Task<IBaseCommandResponse<int>> CreateComment(int id, [FromQuery] string token, [FromForm] TicketCommentCreateCommandRequest request)
@@ -554,7 +581,8 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var ticket = await _dbContext.Tickets.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var ticket = await _dbContext.Tickets.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id && s.CompanyId == companyId);
                 if (ticket == null)
                 {
                     return new BaseCommandResponse<int>
@@ -616,7 +644,7 @@ namespace mvp.tickets.web.Controllers
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{ticket.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{companyId}/{ticket.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {
