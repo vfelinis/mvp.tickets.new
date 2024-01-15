@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseReportQueryRequest, IBaseReportQueryResponse, IBaseCommandResponse, IBaseQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { IUserCreateCommandRequest, IUserModel, IUserUpdateCommandRequest } from '../Models/User';
+import { IUserCreateCommandRequest, IUserLoginCommandRequest, IUserModel, IUserUpdateCommandRequest } from '../Models/User';
 import { browserHistory } from '..';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 
@@ -131,8 +131,8 @@ export class UserStore {
             })
     }
 
-    login(idToken: string): void {
-        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, { idToken: idToken })
+    login(request: IUserLoginCommandRequest): void {
+        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, request)
             .then(response => {
                 if (response.data.isSuccess) {
                     this.setCurrentUser(response.data.data);

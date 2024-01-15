@@ -172,7 +172,7 @@ WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
                     parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
                     query +=
 $@"
-ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" ""{request.SortDirection}"" OFFSET @offset LIMIT @limit";
+ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit";
 
                     var result = await connection.QueryAsync<TicketReportModel>(query, param: parameter);
 

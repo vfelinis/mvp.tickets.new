@@ -9,7 +9,8 @@ import { IUserModel } from '../../Models/User';
 interface IProtectedRouteProps {
     permissions: Permissions,
     children: JSX.Element,
-    user: IUserModel | null
+    user: IUserModel | null,
+    onlyRoot?: boolean
 }
 
 const ProtectedRoute: FC<IProtectedRouteProps> = (props) => {
@@ -18,7 +19,7 @@ const ProtectedRoute: FC<IProtectedRouteProps> = (props) => {
     if (user === null) {
         return <Navigate to={UIRoutesHelper.login.getRoute()} replace={true} />;
     }
-    else if (!hasPermission(user.permissions, props.permissions)) {
+    else if (!hasPermission(user.permissions, props.permissions) || (props.onlyRoot === true && !user.isRootCompany)) {
         return <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} />;
     }
     return props.children;

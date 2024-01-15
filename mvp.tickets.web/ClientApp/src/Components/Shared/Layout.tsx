@@ -19,6 +19,9 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import HomeIcon from '@mui/icons-material/Home';
+import MailIcon from '@mui/icons-material/Mail';
+import BusinessIcon from '@mui/icons-material/Business';
+import EqualizerIcon from '@mui/icons-material/Equalizer';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import BadgeIcon from '@mui/icons-material/Badge';
@@ -341,6 +344,74 @@ const Layout: FC<ILayoutProps> = (props) => {
                                         <BadgeIcon />
                                     </ListItemIcon>
                                     <ListItemText primary="Сотрудник" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                        </List>
+                    </>
+                }
+                {
+                    store.userStore.currentUser != null && store.userStore.currentUser.isRootCompany &&
+                    <>
+                        <Divider />
+                        <List>
+                            <ListItem key="Приглашения" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.invites.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <MailIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Приглашения" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                            <ListItem key="Предприятия" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.companies.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <BusinessIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Предприятия" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                            <ListItem key="Метрики" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.metrics.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <EqualizerIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Метрики" sx={{ opacity: open ? 1 : 0 }} />
                                 </ListItemButton>
                             </ListItem>
                         </List>

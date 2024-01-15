@@ -167,7 +167,7 @@ WHERE u.""{nameof(User.CompanyId)}"" = @companyId";
                 parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
                 query +=
 $@"
-ORDER BY ""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(User.Id)}"" ""{request.SortDirection}"" OFFSET @offset LIMIT @limit";
+ORDER BY ""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(User.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit";
                 
                 var result = await connection.QueryAsync<UserReportModel>(query, param: parameter);
                 var entries = result.ToList();

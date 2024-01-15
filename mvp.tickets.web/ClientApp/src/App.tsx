@@ -46,6 +46,9 @@ import EmployeesTicketDetailView from './Components/Views/Employee/EmployeesTick
 import TicketDetailView from './Components/Views/TicketDetailView';
 import TicketsCommentCreateView from './Components/Views/TicketsCommentCreateView';
 import EmployeesTicketCommentCreateView from './Components/Views/Employee/EmployeesTicketCommentCreateView';
+import RootInvitesView from './Components/Views/Root/Invite/RootInvitesView';
+import RootCompaniesView from './Components/Views/Root/Company/RootCompaniesView';
+import RootMetricsView from './Components/Views/Root/Metric/RootMetricsView';
 
 interface IAppProps {
   user: IUserModel | null
@@ -107,12 +110,19 @@ export const App: FC<IAppProps> = (props) => {
       { path: UIRoutesHelper.employeeTicketDetail.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketDetailView />} user={props.user} /> },
       { path: UIRoutesHelper.employeeTicketCommentCreate.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketCommentCreateView />} user={props.user} /> },
       
+      { path: UIRoutesHelper.invites.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<RootInvitesView />} user={props.user} /> },
+      { path: UIRoutesHelper.companies.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<RootCompaniesView />} user={props.user} /> },
+      { path: UIRoutesHelper.metrics.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<RootMetricsView />} user={props.user} /> },
+
       { path: UIRoutesHelper.notFound.path, element: <NotFoundView /> },
     ],
   };
   const loginRoute = {
     path: UIRoutesHelper.login.path,
-    element: <LoginView />
+    element: <Layout />,
+    children: [
+      { path: '', element: <LoginView /> }
+    ]
   };
   const ticketDetailAltRoute = {
     path: UIRoutesHelper.ticketsDetailAlt.path,

@@ -9,6 +9,7 @@ export interface IUserModel {
     isLocked: boolean,
     dateCreated: Date,
     dateModified: Date,
+    isRootCompany: boolean,
 }
 
 export interface IUserCreateCommandRequest
@@ -24,4 +25,10 @@ export interface IUserCreateCommandRequest
 export interface IUserUpdateCommandRequest extends IUserCreateCommandRequest
 {
     id: number
+}
+
+export interface IUserLoginCommandRequest
+{
+    email: string
+    password: string
 }

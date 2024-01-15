@@ -170,6 +170,20 @@ export class UIRoutesHelper {
         getRoute: (id: number) => `/${this.employeeTicketCommentCreate.path.replace(":id", id.toString())}/`,
     };
 
+    static invites: IRoute = {
+        path: 'invites',
+        getRoute: () => `/${this.invites.path}/`,
+    };
+
+    static companies: IRoute = {
+        path: 'companies',
+        getRoute: () => `/${this.companies.path}/`,
+    };
+
+    static metrics: IRoute = {
+        path: 'metrics',
+        getRoute: () => `/${this.metrics.path}/`,
+    };
 
     static login: IRoute = {
         path: 'login',
