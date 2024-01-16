@@ -7,10 +7,10 @@ import TableComponent, { ColumnType, tableColumnBooleanSearchOptions } from '../
 import { useRootStore } from '../../../../Store/RootStore';
 import { SortDirection } from '../../../../Enums/SortDirection';
 
-interface IRootMetricsViewProps {
+interface IMetricsViewProps {
 }
 
-const RootMetricsView: FC<IRootMetricsViewProps> = (props) => {
+const MetricsView: FC<IMetricsViewProps> = (props) => {
     const store = useRootStore();
 
     // useEffect(() => {
@@ -35,7 +35,6 @@ const RootMetricsView: FC<IRootMetricsViewProps> = (props) => {
         <Typography variant="h6" component="div">
             Метрики
         </Typography>
-        <Button variant="contained" component={Link} to={UIRoutesHelper.adminUsersCreate.getRoute()}>Создать</Button>
         {/* <TableComponent table={{
             options: {
                 editRoute: (row: IUserModel): string => UIRoutesHelper.adminUsersUpdate.getRoute(row.id),
@@ -79,4 +78,4 @@ const RootMetricsView: FC<IRootMetricsViewProps> = (props) => {
     </>;
 };
 
-export default observer(RootMetricsView);
+export default observer(MetricsView);

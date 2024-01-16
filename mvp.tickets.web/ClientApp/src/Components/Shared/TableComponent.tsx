@@ -10,6 +10,7 @@ import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Paper from '@mui/material/Paper';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { visuallyHidden } from '@mui/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -20,6 +21,7 @@ import debounce from 'lodash/debounce';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import Typography from '@mui/material/Typography';
+import { Button } from '@mui/material';
 
 interface ITableComponentProps {
     table: ITable
@@ -33,7 +35,7 @@ export enum ColumnType {
 }
 
 interface ITableColumnValueFormater {
-    (value: any): string;
+    (item: any, value: any): any;
 }
 
 interface ITableColumnSearchOption {
@@ -67,8 +69,9 @@ interface IActionHandle {
 interface ITableOptions {
     isServerSide: boolean
     total: number
-    editRoute: Function | undefined
-    actionHandle?: IActionHandle | undefined
+    editRoute?: Function | undefined
+    actionHandle?: IActionHandle | undefined,
+    deleteHandle?: Function | undefined
 }
 
 interface ITable {
@@ -104,7 +107,7 @@ const TableComponent: FC<ITableComponentProps> = (props) => {
                 break;
         }
         return column.valueFormater !== undefined
-            ? column.valueFormater(value)
+            ? column.valueFormater(item, value)
             : value;
     };
 
@@ -273,6 +276,7 @@ const TableComponent: FC<ITableComponentProps> = (props) => {
                                 </TableCell>;
                         })}
                         {props.table.options.editRoute && <TableCell></TableCell>}
+                        {props.table.options.deleteHandle && <TableCell></TableCell>}
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -288,6 +292,13 @@ const TableComponent: FC<ITableComponentProps> = (props) => {
                                 <TableCell>
                                     <IconButton component={Link} to={props.table.options.editRoute(row)}>
                                         <EditIcon />
+                                    </IconButton>
+                                </TableCell>
+                            }
+                            {props.table.options.deleteHandle !== undefined &&
+                                <TableCell>
+                                    <IconButton onClick={() => props.table.options.deleteHandle(row)}>
+                                        <DeleteIcon />
                                     </IconButton>
                                 </TableCell>
                             }

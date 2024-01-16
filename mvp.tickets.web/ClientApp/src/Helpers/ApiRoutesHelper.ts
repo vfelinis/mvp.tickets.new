@@ -23,4 +23,17 @@ export class ApiRoutesHelper {
         get: (id: number) : string => `/api/tickets/${id}/`,
         createComment: (id: number) : string => `/api/tickets/${id}/comments/`,
     };
+
+    static invite = {
+        report: '/api/invites/',
+        create: '/api/invites/',
+        delete: (id: number) : string => `/api/invites/${id}/`,
+        validate: '/api/invites/validation/',
+    };
+
+    static company = {
+        report: '/api/companies/',
+        create: '/api/companies/',
+        setActive: '/api/companies/activation/',
+    };
 }

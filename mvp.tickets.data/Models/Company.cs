@@ -47,10 +47,6 @@ namespace mvp.tickets.data.Models
                 .HasFilter($"\"{nameof(Company.IsRoot)}\" = true");
 
             modelBuilder.Entity<Company>()
-                .HasIndex(p => p.Name)
-                .IsUnique(true);
-
-            modelBuilder.Entity<Company>()
                 .HasIndex(p => p.Host)
                 .IsUnique(true);
 

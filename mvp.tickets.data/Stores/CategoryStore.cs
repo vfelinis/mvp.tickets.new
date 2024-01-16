@@ -26,7 +26,7 @@ namespace mvp.tickets.data.Stores
             using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
             {
                 DynamicParameters parameter = new DynamicParameters();
-                parameter.Add("@companyId", request.CompantId, DbType.Int32);
+                parameter.Add("@companyId", request.CompanyId, DbType.Int32);
                 var query =
 $@"SELECT
     t1.""{nameof(TicketCategory.Id)}"" AS ""{nameof(CategoryModel.Id)}""

@@ -15,6 +15,6 @@ namespace mvp.tickets.domain.Constants
         public const string AdminPolicy = "AdminPolicy";
         public const string EmployeePolicy = "EmployeePolicy";
         public const string UserPolicy = "UserPolicy";
-        public const string RootCompanyPolicy = "RootCompanyPolicy";
+        public const string RootSpacePolicy = "RootSpacePolicy";
     }
 }

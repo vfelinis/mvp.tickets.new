@@ -19,7 +19,8 @@ const ProtectedRoute: FC<IProtectedRouteProps> = (props) => {
     if (user === null) {
         return <Navigate to={UIRoutesHelper.login.getRoute()} replace={true} />;
     }
-    else if (!hasPermission(user.permissions, props.permissions) || (props.onlyRoot === true && !user.isRootCompany)) {
+    else if ((props.onlyRoot !== true && !hasPermission(user.permissions, props.permissions))
+        || (props.onlyRoot === true && !user.isRootCompany && !hasPermission(user.permissions, props.permissions))) {
         return <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} />;
     }
     return props.children;

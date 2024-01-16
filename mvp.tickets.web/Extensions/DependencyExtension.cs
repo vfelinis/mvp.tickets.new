@@ -39,7 +39,7 @@ namespace mvp.tickets.web.Extensions
                 options.AddPolicy(AuthConstants.AdminPolicy, policy => policy.RequireClaim(AuthConstants.AdminClaim));
                 options.AddPolicy(AuthConstants.EmployeePolicy, policy => policy.RequireClaim(AuthConstants.EmployeeClaim));
                 options.AddPolicy(AuthConstants.UserPolicy, policy => policy.RequireClaim(AuthConstants.UserClaim));
-                options.AddPolicy(AuthConstants.RootCompanyPolicy, policy => policy.RequireClaim(AuthConstants.RootCompanyPolicy));
+                options.AddPolicy(AuthConstants.RootSpacePolicy, policy => policy.RequireClaim(AuthConstants.RootSpacePolicy));
             });
 
             services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, EmailBackgroundSearvice>();
@@ -61,6 +61,7 @@ namespace mvp.tickets.web.Extensions
             #region Domain
             services.AddTransient<IUserService, UserService>();
             services.AddTransient<ICategoryService, CategoryService>();
+            services.AddTransient<IEmailService, EmailService>();
             #endregion
 
 

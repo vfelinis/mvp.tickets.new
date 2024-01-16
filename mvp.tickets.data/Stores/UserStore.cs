@@ -66,16 +66,16 @@ namespace mvp.tickets.data.Stores
                 if (request.Password != null)
                 {
                     user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()
-                        && s.Password == request.Password && s.CompanyId == request.CompantId).ConfigureAwait(false);
+                        && s.Password == request.Password && s.CompanyId == request.CompanyId).ConfigureAwait(false);
                 }
                 else
                 {
-                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower() && s.CompanyId == request.CompantId).ConfigureAwait(false);
+                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower() && s.CompanyId == request.CompanyId).ConfigureAwait(false);
                 }
             }
             else if (request?.Id != null)
             {
-                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompantId).ConfigureAwait(false);
+                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompanyId).ConfigureAwait(false);
             }
 
             if (user != null)
@@ -110,7 +110,7 @@ namespace mvp.tickets.data.Stores
             using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
             {
                 DynamicParameters parameter = new DynamicParameters();
-                parameter.Add("@companyId", request.CompantId, DbType.Int32);
+                parameter.Add("@companyId", request.CompanyId, DbType.Int32);
                 var query =
 $@"SELECT
     u.""{nameof(User.Id)}"" AS ""{nameof(UserReportModel.Id)}""

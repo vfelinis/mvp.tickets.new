@@ -38,10 +38,10 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.60.0.3056" />
+    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.65.0.3287" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="8.0.0" />
-    <PackageReference Include="MimeKit" Version="4.0.0" />
+    <PackageReference Include="MimeKit" Version="4.3.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
   </ItemGroup>

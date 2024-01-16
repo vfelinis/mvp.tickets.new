@@ -9,6 +9,8 @@ import { ResponseTemplateTypeStore } from './ResponseTemplateTypeStore';
 import { StatusStore } from './StatusStore';
 import { TicketStore } from './TicketStore';
 import { UserStore } from './UserStore';
+import { InviteStore } from './InviteStore';
+import { CompanyStore } from './CompanyStore';
 
 export class RootStore {
   userStore: UserStore;
@@ -21,6 +23,8 @@ export class RootStore {
   responseTemplateStore: ResponseTemplateStore;
   statusStore: StatusStore;
   ticketStore: TicketStore;
+  inviteStore: InviteStore;
+  companyStore: CompanyStore;
 
   constructor() {
     this.userStore = new UserStore(this);
@@ -33,6 +37,8 @@ export class RootStore {
     this.responseTemplateStore = new ResponseTemplateStore(this);
     this.statusStore = new StatusStore(this);
     this.ticketStore = new TicketStore(this);
+    this.inviteStore = new InviteStore(this);
+    this.companyStore = new CompanyStore(this);
   }
 }
 

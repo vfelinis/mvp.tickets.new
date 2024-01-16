@@ -17,18 +17,9 @@ namespace mvp.tickets.data.Stores
             _connectionStrings = connectionStrings ?? ThrowHelper.ArgumentNull<IConnectionStrings>();
         }
 
-        public async Task<ICompanyModel> Get(ICompanyQueryRequest request)
+        public async Task<int?> GetIdByHost(string host)
         {
-            return await _dbContext.Companies.Where(x => x.Host == request.Host).Select(s => new CompanyModel
-            {
-                Id = s.Id,
-                Host = s.Host,
-                Name = s.Name,
-                IsRoot = s.IsRoot,
-                IsActive = s.IsActive,
-                DateCreated = s.DateCreated,
-                DateModified = s.DateModified
-            }).FirstOrDefaultAsync();
+            return await _dbContext.Companies.Where(x => x.Host == host && x.IsActive).Select(s => s.Id).FirstOrDefaultAsync();
         }
     }
 }

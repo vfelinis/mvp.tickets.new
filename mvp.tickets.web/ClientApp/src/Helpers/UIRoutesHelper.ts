@@ -175,9 +175,19 @@ export class UIRoutesHelper {
         getRoute: () => `/${this.invites.path}/`,
     };
 
+    static invitesCreate: IRoute = {
+        path: 'invites/create',
+        getRoute: () => `/${this.invitesCreate.path}/`,
+    };
+
     static companies: IRoute = {
         path: 'companies',
         getRoute: () => `/${this.companies.path}/`,
+    };
+
+    static companiesCreate: IRoute = {
+        path: 'companies/create',
+        getRoute: () => `/${this.companiesCreate.path}/`,
     };
 
     static metrics: IRoute = {

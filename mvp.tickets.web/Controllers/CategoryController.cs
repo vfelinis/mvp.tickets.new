@@ -23,7 +23,7 @@ namespace mvp.tickets.web.Controllers
         {
             if (request != null)
             {
-                request.CompantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             }
             return await _service.Query(request);
         }
@@ -34,7 +34,7 @@ namespace mvp.tickets.web.Controllers
         {
             if (request != null)
             {
-                request.CompantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             }
             return await _service.Create(request);
         }
@@ -45,7 +45,7 @@ namespace mvp.tickets.web.Controllers
         {
             if (request != null)
             {
-                request.CompantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             }
             return await _service.Update(request);
         }

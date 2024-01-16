@@ -25,7 +25,7 @@ namespace mvp.tickets.data.Models
             });
 
             modelBuilder.Entity<Invite>()
-                .HasIndex(p => new { p.Email, p.Company })
+                .HasIndex(p => p.Email)
                 .IsUnique(true);
 
             modelBuilder.Entity<Invite>().ToTable(TableName);

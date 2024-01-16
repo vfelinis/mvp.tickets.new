@@ -8,7 +8,7 @@ namespace mvp.tickets.domain.Constants
 {
     public static class AppConstants
     {
-        public const string DefaultHost = "mvp-stack.ru";
+        public const string DefaultHost = "tickets.mvp-stack.ru";
         public const string DebugHostCookie = "host";
     }
 }

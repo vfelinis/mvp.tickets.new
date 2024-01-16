@@ -138,7 +138,9 @@ const Layout: FC<ILayoutProps> = (props) => {
         || store.responseTemplateStore.isLoading
         || store.responseTemplateTypeStore.isLoading
         || store.statusStore.isLoading
-        || store.ticketStore.isLoading;
+        || store.ticketStore.isLoading
+        || store.inviteStore.isLoading
+        || store.companyStore.isLoading;
 
     return <>
         {isLoading && <Box sx={{

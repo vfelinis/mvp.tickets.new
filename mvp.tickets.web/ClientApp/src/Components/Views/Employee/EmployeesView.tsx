@@ -58,7 +58,7 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
                 editRoute: (row: ITicketModel): string => UIRoutesHelper.employeeTicketDetail.getRoute(row.id),
                 isServerSide: true,
                 actionHandle: actionHandle,
-                total: store.ticketStore.report.length,
+                total: store.ticketStore.total,
             },
             columns: [
                 { field: 'id', label: 'Id', type: ColumnType.Number, sortable: true, searchable: true },

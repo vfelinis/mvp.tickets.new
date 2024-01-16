@@ -1,5 +1,4 @@
-﻿using Google;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
@@ -67,8 +66,8 @@ namespace mvp.tickets.domain.Services
             try
             {
                 
-                var company = await _companyStore.Get(new CompanyQueryRequest { Host = request.Host });
-                if (company == null)
+                var companyId = await _companyStore.GetIdByHost(request.Host);
+                if (companyId == null)
                 {
                     return new BaseCommandResponse<(IUserModel user, List<Claim> claims)>
                     {
@@ -80,7 +79,7 @@ namespace mvp.tickets.domain.Services
 
                 var email = request.Email;
                 var password = HashHelper.GetSHA256Hash(request.Password);
-                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password, CompantId = company.Id }).ConfigureAwait(false);
+                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password, CompanyId = companyId.Value }).ConfigureAwait(false);
                 IUserModel userModel = userResponse.Data;
                 if (userResponse.Code == ResponseCodes.NotFound)
                 {
@@ -112,6 +111,10 @@ namespace mvp.tickets.domain.Services
                 if (userModel.Permissions.HasFlag(Permissions.Admin))
                 {
                     claims.Add(new Claim(AuthConstants.AdminClaim, "true"));
+                    if (userModel.IsRootCompany)
+                    {
+                        claims.Add(new Claim(AuthConstants.RootSpacePolicy, "true"));
+                    }
                 }
                 if (userModel.Permissions.HasFlag(Permissions.Employee))
                 {
@@ -120,10 +123,6 @@ namespace mvp.tickets.domain.Services
                 if (userModel.Permissions.HasFlag(Permissions.User))
                 {
                     claims.Add(new Claim(AuthConstants.UserClaim, "true"));
-                }
-                if (userModel.IsRootCompany)
-                {
-                    claims.Add(new Claim(AuthConstants.RootCompanyPolicy, "true"));
                 }
 
                 response = new BaseCommandResponse<(IUserModel user, List<Claim> claims)>

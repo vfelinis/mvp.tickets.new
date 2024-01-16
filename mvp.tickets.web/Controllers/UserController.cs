@@ -40,7 +40,7 @@ namespace mvp.tickets.web.Controllers
             {
                 var id = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
                 var compantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
-                var response = await _userService.Query(new UserQueryRequest { Id = id, CompantId = compantId });
+                var response = await _userService.Query(new UserQueryRequest { Id = id, CompanyId = compantId });
                 return response;
             }
             else
@@ -98,7 +98,7 @@ namespace mvp.tickets.web.Controllers
         {
             if (request != null)
             {
-                request.CompantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             }
             return await _userService.GetReport(request);
         }
