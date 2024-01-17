@@ -190,6 +190,11 @@ export class UIRoutesHelper {
         getRoute: () => `/${this.companiesCreate.path}/`,
     };
 
+    static adminCompany: IRoute = {
+        path: 'admin/company',
+        getRoute: () => `/${this.adminCompany.path}/`,
+    };
+
     static metrics: IRoute = {
         path: 'metrics',
         getRoute: () => `/${this.metrics.path}/`,

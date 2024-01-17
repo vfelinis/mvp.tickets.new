@@ -46,7 +46,7 @@ export class InviteStore {
 
     getReport() : void {
         this.setIsLoading(true);
-        axios.get<IBaseReportQueryResponse<IInviteModel[]>>(ApiRoutesHelper.invite.report)
+        axios.get<IBaseQueryResponse<IInviteModel[]>>(ApiRoutesHelper.invite.report)
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {

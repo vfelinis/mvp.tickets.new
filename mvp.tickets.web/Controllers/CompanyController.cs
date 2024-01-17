@@ -142,7 +142,7 @@ namespace mvp.tickets.web.Controllers
 
         [Authorize(Policy = AuthConstants.RootSpacePolicy)]
         [HttpPut("activation")]
-        public async Task<IBaseCommandResponse<bool>> SetActive([FromBody] CompanySetActiveCommandRequest  request)
+        public async Task<IBaseCommandResponse<bool>> SetActive([FromBody] CompanySetActiveCommandRequest request)
         {
             if (request == null)
             {
@@ -183,6 +183,112 @@ namespace mvp.tickets.web.Controllers
                 response = new BaseCommandResponse<bool>();
                 response.HandleException(ex);
             }
+            return response;
+        }
+
+        [Authorize(Policy = AuthConstants.AdminPolicy)]
+        [HttpGet("{id}")]
+        public async Task<IBaseQueryResponse<ICompanyModel>> Get([FromRoute] int id)
+        {
+            IBaseQueryResponse<ICompanyModel> response = default;
+            try
+            {
+                if (id != int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value))
+                {
+                    return new BaseQueryResponse<ICompanyModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest
+                    };
+                }
+                var entry = await _dbContext.Companies.FirstOrDefaultAsync(s => s.Id == id && s.IsActive);
+                if (entry == null)
+                {
+                    return new BaseQueryResponse<ICompanyModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.NotFound
+                    };
+                }
+
+                response = new BaseQueryResponse<ICompanyModel>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = new CompanyModel
+                    {
+                        Id = entry.Id,
+                        Name = entry.Name,
+                        IsActive = entry.IsActive,
+                        Host = entry.Host.Replace($".{AppConstants.DefaultHost}", ""),
+                        DateCreated = entry.DateCreated
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseQueryResponse<ICompanyModel>();
+                response.HandleException(ex);
+            }
+
+            return response;
+        }
+
+        [Authorize(Policy = AuthConstants.AdminPolicy)]
+        [HttpPut("{id}")]
+        public async Task<IBaseCommandResponse<bool>> Update([FromRoute] int id, [FromBody] CompanyUpdateCommandRequest request)
+        {
+            if (request == null)
+            {
+                return new BaseCommandResponse<bool>
+                {
+                    IsSuccess = false,
+                    Code = ResponseCodes.BadRequest
+                };
+            }
+
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                if (request.Id != int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value))
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest
+                    };
+                }
+                var entry = await _dbContext.Companies.FirstOrDefaultAsync(s => s.Id == request.Id && s.IsActive);
+                if (entry == null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.NotFound
+                    };
+                }
+
+                entry.DateModified = DateTimeOffset.UtcNow;
+                entry.Name = request.Name;
+                entry.Host = $"{request.Host.ToLower()}.{AppConstants.DefaultHost}";
+
+                await _dbContext.SaveChangesAsync();
+
+                response = new BaseCommandResponse<bool>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+
             return response;
         }
     }

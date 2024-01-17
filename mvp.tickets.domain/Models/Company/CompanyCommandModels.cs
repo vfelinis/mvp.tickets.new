@@ -40,4 +40,22 @@ namespace mvp.tickets.domain.Models
         public int Id { get; set; }
         public bool IsActive { get; set; }
     }
+
+    public interface ICompanyUpdateCommandRequest : IBaseCommandRequest
+    {
+        int Id { get; set; }
+        string Name { get; set; }
+        string Host { get; set; }
+    }
+    public record CompanyUpdateCommandRequest : BaseCommandRequest, ICompanyUpdateCommandRequest
+    {
+        [Required]
+        public int Id { get; set; }
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Host { get; set; }
+    }
 }

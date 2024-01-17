@@ -20,3 +20,10 @@ export interface ICompanySetActiveCommandRequest
     id: number,
     isActive: boolean,
 }
+
+export interface ICompanyUpdateCommandRequest
+{
+    id: number,
+    name: string,
+    host: string,
+}

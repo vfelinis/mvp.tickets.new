@@ -9,6 +9,7 @@ export interface IUserModel {
     isLocked: boolean,
     dateCreated: Date,
     dateModified: Date,
+    companyId: number,
     isRootCompany: boolean,
 }
 

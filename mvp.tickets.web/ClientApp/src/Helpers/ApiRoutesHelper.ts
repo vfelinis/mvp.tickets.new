@@ -35,5 +35,7 @@ export class ApiRoutesHelper {
         report: '/api/companies/',
         create: '/api/companies/',
         setActive: '/api/companies/activation/',
+        get: (id: number) : string => `/api/companies/${id}/`,
+        update: (id: number) : string => `/api/companies/${id}/`,
     };
 }

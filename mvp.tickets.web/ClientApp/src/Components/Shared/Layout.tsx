@@ -292,6 +292,9 @@ const Layout: FC<ILayoutProps> = (props) => {
                                     'aria-labelledby': 'admin-button',
                                 }}
                             >
+                                <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminCompany.getRoute()}>
+                                    Предприятие
+                                </MenuItem>
                                 <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminUsers.getRoute()}>
                                     Пользователи
                                 </MenuItem>
