@@ -29,7 +29,7 @@ namespace mvp.tickets.data.Helpers
                         {
                             IsActive = true,
                             IsRoot = true,
-                            Host = AppConstants.DefaultHost,
+                            Host = $"tickets.{AppConstants.DefaultHost}",
                             DateCreated = DateTimeOffset.UtcNow,
                             DateModified = DateTimeOffset.UtcNow,
                             Name = "Root",

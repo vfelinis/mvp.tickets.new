@@ -120,7 +120,7 @@ export class CompanyStore {
 
     update(request: ICompanyUpdateCommandRequest) : void {
         this.setIsLoading(true);
-        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.company.update(request.id), request)
+        axios.put<IBaseCommandResponse<boolean>>(ApiRoutesHelper.company.update(request.id), request)
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
