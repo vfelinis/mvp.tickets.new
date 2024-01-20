@@ -75,3 +75,21 @@ export interface ITicketCommentAttachmentModel
     originalFileName: string
     dateCreated: Date
 }
+
+export enum UpdatedTicketField
+{
+    None = 0,
+    Assignee = 1,
+    Priority = 2,
+    Status = 3,
+    Queue = 4,
+    Category = 5,
+    Resolution = 6
+}
+
+export interface ITicketUpdateCommandRequest
+{
+    id: number
+    updatedField: UpdatedTicketField
+    value: number
+}

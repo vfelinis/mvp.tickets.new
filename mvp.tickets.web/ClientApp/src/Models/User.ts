@@ -56,3 +56,9 @@ export interface IUserResetPasswordCommandRequest
     password: string
     code: string
 }
+
+export interface IUserAssigneeModel
+{
+    id: number
+    name: string
+}

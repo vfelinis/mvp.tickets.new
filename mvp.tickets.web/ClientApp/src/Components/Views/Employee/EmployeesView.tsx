@@ -25,6 +25,13 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
         store.priorityStore.getEntries(true);
         store.queueStore.getEntries(true);
         store.statusStore.getEntries(true);
+        return () => {
+            store.ticketStore.setReport([], 0);
+            store.categoryStore.setCategories([]);
+            store.priorityStore.setEntries([]);
+            store.queueStore.setEntries([]);
+            store.statusStore.setEntries([]);
+        };
     }, []);
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
@@ -62,7 +69,7 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
             },
             columns: [
                 { field: 'id', label: 'Id', type: ColumnType.Number, sortable: true, searchable: true },
-                { field: 'name', label: 'Название', type: ColumnType.String, sortable: false, searchable: false },
+                { field: 'name', label: 'Название', type: ColumnType.String, sortable: true, searchable: true },
                 { field: 'dateCreated', label: 'Создан', type: ColumnType.Date, sortable: true, searchable: false },
                 { field: 'dateModified', label: 'Обновлен', type: ColumnType.Date, sortable: true, searchable: false },
                 { field: 'source', label: 'Источник', type: ColumnType.String, sortable: false, searchable: true,

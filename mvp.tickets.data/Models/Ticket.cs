@@ -17,9 +17,11 @@ namespace mvp.tickets.data.Models
         public Company Company { get; set; }
 
         public int ReporterId { get; set; }
+        public string ReporterEmail { get; set; }
         public User Reporter { get; set; }
 
         public int? AssigneeId { get; set; }
+        public string AssigneeEmail { get; set; }
         public User Assignee { get; set; }
 
         public int? TicketPriorityId { get; set; }
@@ -56,6 +58,8 @@ namespace mvp.tickets.data.Models
             {
                 s.Property(p => p.Name).IsRequired(true).HasMaxLength(100);
                 s.Property(p => p.Token).IsRequired(false).HasMaxLength(250);
+                s.Property(p => p.ReporterEmail).IsRequired(true).HasMaxLength(250).HasDefaultValue("");
+                s.Property(p => p.AssigneeEmail).IsRequired(false).HasMaxLength(250);
                 s.Property(p => p.AssigneeId).IsRequired(false);
                 s.Property(p => p.TicketPriorityId).IsRequired(false);
                 s.Property(p => p.TicketResolutionId).IsRequired(false);

@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseReportQueryRequest, IBaseReportQueryResponse, IBaseCommandResponse, IBaseQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
+import { IUserAssigneeModel, IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
 import { browserHistory } from '..';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 
@@ -13,6 +13,7 @@ export class UserStore {
     wasInit: boolean;
     currentUser: IUserModel | null;
     report: IUserModel[];
+    assignees: IUserAssigneeModel[];
     total: number;
     editableUser: IUserModel | null;
 
@@ -22,6 +23,7 @@ export class UserStore {
         this.wasInit = false;
         this.currentUser = null;
         this.report = [];
+        this.assignees = [];
         this.total = 0;
         this.editableUser = null;
         makeObservable(this, {
@@ -29,6 +31,7 @@ export class UserStore {
             wasInit: observable,
             currentUser: observable,
             report: observable,
+            assignees: observable,
             total: observable,
             editableUser: observable,
             login: action,
@@ -41,7 +44,12 @@ export class UserStore {
             getDataForUpdateForm: action,
             update: action,
             setIsLoading: action,
+            setAssignees: action,
         });
+    }
+
+    setAssignees(assignees: IUserAssigneeModel[]) : void {
+        this.assignees = assignees;
     }
 
     setIsLoading(isLoading: boolean) : void {
@@ -69,6 +77,24 @@ export class UserStore {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     this.setReport(response.data.data, response.data.total);
+
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    getAssignees() : void {
+        this.setIsLoading(true);
+        axios.get<IBaseQueryResponse<IUserAssigneeModel[]>>(ApiRoutesHelper.user.assignees)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    this.setAssignees(response.data.data);
 
                 } else {
                     this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());

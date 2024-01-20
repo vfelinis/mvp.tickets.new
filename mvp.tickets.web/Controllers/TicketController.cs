@@ -8,14 +8,10 @@ using mvp.tickets.data.Procedures;
 using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
-using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using Npgsql;
 using System.Data;
-using System.Net.Mail;
 using System.Web;
-using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace mvp.tickets.web.Controllers
 {
@@ -62,52 +58,13 @@ namespace mvp.tickets.web.Controllers
                     parameter.Add("@companyId", companyId, DbType.Int32);
                     var query =
 $@"
+DROP TABLE IF EXISTS tickets_tmp;
+
+CREATE TEMPORARY TABLE tickets_tmp AS 
 SELECT
     COUNT(*) OVER() AS ""{nameof(TicketReportModel.Total)}""
     ,t.""{nameof(Ticket.Id)}"" AS ""{nameof(TicketReportModel.Id)}""
-    ,t.""{nameof(Ticket.Name)}"" AS ""{nameof(TicketReportModel.Name)}""
-    ,t.""{nameof(Ticket.Token)}"" AS ""{nameof(TicketReportModel.Token)}""
-    ,CASE t.""{nameof(Ticket.Source)}""
-        WHEN {(int)TicketSource.Email} THEN 'Email'
-        WHEN {(int)TicketSource.Telegram} THEN 'Telegram'
-        ELSE 'Web'
-    END AS ""{nameof(TicketReportModel.Source)}""
-    ,t.""{nameof(Ticket.IsClosed)}"" AS ""{nameof(TicketReportModel.IsClosed)}""
-    ,t.""{nameof(Ticket.DateCreated)}"" AS ""{nameof(TicketReportModel.DateCreated)}""
-    ,t.""{nameof(Ticket.DateModified)}"" AS ""{nameof(TicketReportModel.DateModified)}""
-
-    ,ru.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.ReporterId)}""
-    ,ru.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.ReporterEmail)}""
-    ,ru.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.ReporterFirstName)}""
-    ,ru.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.ReporterLastName)}""
-
-    ,au.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.AssigneeId)}""
-    ,au.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.AssigneeEmail)}""
-    ,au.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.AssigneeFirstName)}""
-    ,au.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.AssigneeLastName)}""
-            
-    ,tp.""{nameof(TicketPriority.Id)}"" AS ""{nameof(TicketReportModel.TicketPriorityId)}""
-    ,tp.""{nameof(TicketPriority.Name)}"" AS ""{nameof(TicketReportModel.TicketPriority)}""
-            
-    ,tq.""{nameof(TicketQueue.Id)}"" AS ""{nameof(TicketReportModel.TicketQueueId)}""
-    ,tq.""{nameof(TicketQueue.Name)}"" AS ""{nameof(TicketReportModel.TicketQueue)}""
-
-    ,tr.""{nameof(TicketResolution.Id)}"" AS ""{nameof(TicketReportModel.TicketResolutionId)}""
-    ,tr.""{nameof(TicketResolution.Name)}"" AS ""{nameof(TicketReportModel.TicketResolution)}""
-
-    ,ts.""{nameof(TicketStatus.Id)}"" AS ""{nameof(TicketReportModel.TicketStatusId)}""
-    ,ts.""{nameof(TicketStatus.Name)}"" AS ""{nameof(TicketReportModel.TicketStatus)}""
-
-    ,tc.""{nameof(TicketCategory.Id)}"" AS ""{nameof(TicketReportModel.TicketCategoryId)}""
-    ,tc.""{nameof(TicketCategory.Name)}"" AS ""{nameof(TicketReportModel.TicketCategory)}""
 FROM dbo.""{TicketExtension.TableName}"" t
-INNER JOIN dbo.""{UserExtension.TableName}"" ru ON t.""{nameof(Ticket.ReporterId)}"" = ru.""{nameof(data.Models.User.Id)}""
-INNER JOIN dbo.""{TicketQueueExtension.TableName}"" tq ON t.""{nameof(Ticket.TicketQueueId)}"" = tq.""{nameof(TicketQueue.Id)}""
-INNER JOIN dbo.""{TicketStatusExtension.TableName}"" ts ON t.""{nameof(Ticket.TicketStatusId)}"" = ts.""{nameof(TicketStatus.Id)}""
-INNER JOIN dbo.""{TicketCategoryExtension.TableName}"" tc ON t.""{nameof(Ticket.TicketCategoryId)}"" = tc.""{nameof(TicketCategory.Id)}""
-LEFT JOIN dbo.""{UserExtension.TableName}"" au ON t.""{nameof(Ticket.AssigneeId)}"" = au.""{nameof(data.Models.User.Id)}""
-LEFT JOIN dbo.""{TicketPriorityExtension.TableName}"" tp ON t.""{nameof(Ticket.TicketPriorityId)}"" = tp.""{nameof(TicketPriority.Id)}""
-LEFT JOIN dbo.""{TicketResolutionExtension.TableName}"" tr ON t.""{nameof(Ticket.TicketResolutionId)}"" = tr.""{nameof(TicketResolution.Id)}""
 WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
 ";
                     if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
@@ -130,10 +87,20 @@ WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
                                 parameter.Add("@searchByIsClosed", Convert.ToBoolean(search.Value), DbType.Boolean);
                                 query += $@" AND t.""{nameof(Ticket.IsClosed)}"" = @searchByIsClosed";
                             }
-                            if (User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && string.Equals(search.Key, nameof(Ticket.ReporterId), StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(search.Key, nameof(Ticket.Name), StringComparison.OrdinalIgnoreCase))
                             {
-                                parameter.Add("@searchByReporterId", Convert.ToInt32(search.Value), DbType.Int32);
-                                query += $@" AND t.""{nameof(Ticket.ReporterId)}"" = @searchByReporterId";
+                                parameter.Add("@searchByName", search.Value, DbType.String);
+                                query += $@" AND t.""{nameof(Ticket.Name)}"" = @searchByName";
+                            }
+                            if (string.Equals(search.Key, nameof(Ticket.ReporterEmail), StringComparison.OrdinalIgnoreCase))
+                            {
+                                parameter.Add("@searchByReporter", search.Value, DbType.String);
+                                query += $@" AND t.""{nameof(Ticket.ReporterEmail)}"" = @searchByReporter";
+                            }
+                            if (string.Equals(search.Key, nameof(Ticket.AssigneeEmail), StringComparison.OrdinalIgnoreCase))
+                            {
+                                parameter.Add("@searchByAssignee", search.Value, DbType.String);
+                                query += $@" AND t.""{nameof(Ticket.AssigneeEmail)}"" = @searchByAssignee";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketPriorityId), StringComparison.OrdinalIgnoreCase))
                             {
@@ -172,7 +139,57 @@ WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
                     parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
                     query +=
 $@"
-ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit";
+ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit;
+
+SELECT
+    tmp.""{nameof(TicketReportModel.Total)}""
+    ,tmp.""{nameof(TicketReportModel.Id)}""
+    ,t.""{nameof(Ticket.Name)}"" AS ""{nameof(TicketReportModel.Name)}""
+    ,t.""{nameof(Ticket.Token)}"" AS ""{nameof(TicketReportModel.Token)}""
+    ,CASE t.""{nameof(Ticket.Source)}""
+        WHEN {(int)TicketSource.Email} THEN 'Email'
+        WHEN {(int)TicketSource.Telegram} THEN 'Telegram'
+        ELSE 'Web'
+    END AS ""{nameof(TicketReportModel.Source)}""
+    ,t.""{nameof(Ticket.IsClosed)}"" AS ""{nameof(TicketReportModel.IsClosed)}""
+    ,t.""{nameof(Ticket.DateCreated)}"" AS ""{nameof(TicketReportModel.DateCreated)}""
+    ,t.""{nameof(Ticket.DateModified)}"" AS ""{nameof(TicketReportModel.DateModified)}""
+
+    ,ru.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.ReporterId)}""
+    ,ru.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.ReporterEmail)}""
+    ,ru.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.ReporterFirstName)}""
+    ,ru.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.ReporterLastName)}""
+
+    ,au.""{nameof(data.Models.User.Id)}"" AS ""{nameof(TicketReportModel.AssigneeId)}""
+    ,au.""{nameof(data.Models.User.Email)}"" AS ""{nameof(TicketReportModel.AssigneeEmail)}""
+    ,au.""{nameof(data.Models.User.FirstName)}"" AS ""{nameof(TicketReportModel.AssigneeFirstName)}""
+    ,au.""{nameof(data.Models.User.LastName)}"" AS ""{nameof(TicketReportModel.AssigneeLastName)}""
+            
+    ,tp.""{nameof(TicketPriority.Id)}"" AS ""{nameof(TicketReportModel.TicketPriorityId)}""
+    ,tp.""{nameof(TicketPriority.Name)}"" AS ""{nameof(TicketReportModel.TicketPriority)}""
+            
+    ,tq.""{nameof(TicketQueue.Id)}"" AS ""{nameof(TicketReportModel.TicketQueueId)}""
+    ,tq.""{nameof(TicketQueue.Name)}"" AS ""{nameof(TicketReportModel.TicketQueue)}""
+
+    ,tr.""{nameof(TicketResolution.Id)}"" AS ""{nameof(TicketReportModel.TicketResolutionId)}""
+    ,tr.""{nameof(TicketResolution.Name)}"" AS ""{nameof(TicketReportModel.TicketResolution)}""
+
+    ,ts.""{nameof(TicketStatus.Id)}"" AS ""{nameof(TicketReportModel.TicketStatusId)}""
+    ,ts.""{nameof(TicketStatus.Name)}"" AS ""{nameof(TicketReportModel.TicketStatus)}""
+
+    ,tc.""{nameof(TicketCategory.Id)}"" AS ""{nameof(TicketReportModel.TicketCategoryId)}""
+    ,tc.""{nameof(TicketCategory.Name)}"" AS ""{nameof(TicketReportModel.TicketCategory)}""
+FROM tickets_tmp tmp
+INNER JOIN dbo.""{TicketExtension.TableName}"" t ON tmp.""Id"" = t.""Id""
+INNER JOIN dbo.""{UserExtension.TableName}"" ru ON t.""{nameof(Ticket.ReporterId)}"" = ru.""{nameof(data.Models.User.Id)}""
+INNER JOIN dbo.""{TicketQueueExtension.TableName}"" tq ON t.""{nameof(Ticket.TicketQueueId)}"" = tq.""{nameof(TicketQueue.Id)}""
+INNER JOIN dbo.""{TicketStatusExtension.TableName}"" ts ON t.""{nameof(Ticket.TicketStatusId)}"" = ts.""{nameof(TicketStatus.Id)}""
+INNER JOIN dbo.""{TicketCategoryExtension.TableName}"" tc ON t.""{nameof(Ticket.TicketCategoryId)}"" = tc.""{nameof(TicketCategory.Id)}""
+LEFT JOIN dbo.""{UserExtension.TableName}"" au ON t.""{nameof(Ticket.AssigneeId)}"" = au.""{nameof(data.Models.User.Id)}""
+LEFT JOIN dbo.""{TicketPriorityExtension.TableName}"" tp ON t.""{nameof(Ticket.TicketPriorityId)}"" = tp.""{nameof(TicketPriority.Id)}""
+LEFT JOIN dbo.""{TicketResolutionExtension.TableName}"" tr ON t.""{nameof(Ticket.TicketResolutionId)}"" = tr.""{nameof(TicketResolution.Id)}""
+ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(Ticket.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit;
+";
 
                     var result = await connection.QueryAsync<TicketReportModel>(query, param: parameter);
 
@@ -312,6 +329,52 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
         }
 
         [Authorize(Policy = AuthConstants.UserPolicy)]
+        [HttpPut("{id}/close")]
+        public async Task<IBaseCommandResponse<bool>> Close(int id)
+        {
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                var entry = await _dbContext.Tickets.FirstOrDefaultAsync(s => s.Id == id && s.CompanyId == companyId);
+
+                if (entry == null || entry.ReporterId != userId)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.NotFound
+                    };
+                }
+
+                entry.IsClosed = true;
+                var closeStatus = await _dbContext.TicketStatuses.FirstOrDefaultAsync(s => s.CompanyId == companyId && s.IsActive && s.IsCompletion);
+                if (closeStatus != null)
+                {
+                    entry.TicketStatusId = closeStatus.Id;
+                }
+                
+                await _dbContext.SaveChangesAsync();
+
+                return new BaseCommandResponse<bool>
+                {
+                    Data = true,
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+
+            return response;
+        }
+
+        [Authorize(Policy = AuthConstants.UserPolicy)]
         [HttpPost]
         public async Task<IBaseCommandResponse<int>> Create([FromForm] TicketCreateCommandRequest request)
         {
@@ -360,6 +423,7 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
                     DateCreated = DateTimeOffset.UtcNow,
                     DateModified = DateTimeOffset.UtcNow,
                     ReporterId = userId,
+                    ReporterEmail = User.Identity.Name.ToLower(),
                     TicketQueueId = defaultQueue.Id,
                     TicketStatusId = defaultStatus.Id,
                     TicketCategoryId = request.TicketCategoryId,
@@ -431,183 +495,104 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
             return response;
         }
 
-        //[HttpPost("telegram")]
-        //public async Task<IActionResult> CreateByTelegram([FromBody] TicketCreateByTelegramCommandRequest request)
-        //{
-        //    if (request == null || request.ApiKey != _settings.ApiKey)
-        //    {
-        //        return BadRequest();
-        //    }
+        [Authorize(Policy = AuthConstants.EmployeePolicy)]
+        [HttpPut("{id}")]
+        public async Task<IBaseCommandResponse<ITicketModel>> Update([FromRoute] int id, [FromBody] TicketUpdateCommandRequest request)
+        {
+            if (request == null)
+            {
+                return new BaseCommandResponse<ITicketModel>
+                {
+                    IsSuccess = false,
+                    Code = ResponseCodes.BadRequest
+                };
+            }
+            IBaseCommandResponse<ITicketModel> response = default;
+            try
+            {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var entry = await _dbContext.Tickets.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == companyId);
 
-        //    try
-        //    {
-        //        var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-        //        if (defaultQueue == null)
-        //        {
-        //            return BadRequest();
-        //        }
+                if (entry == null)
+                {
+                    return new BaseCommandResponse<ITicketModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.NotFound
+                    };
+                }
 
-        //        var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-        //        if (defaultStatus == null)
-        //        {
-        //            return BadRequest();
-        //        }
+                switch (request.UpdatedField)
+                {
+                    case UpdatedTicketField.Assignee:
+                        var assignee = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value &&  s.CompanyId == companyId);
+                        if (assignee != null)
+                        {
+                            entry.AssigneeId = assignee.Id;
+                            entry.AssigneeEmail = assignee.Email;
+                        }
+                        break;
+                    case UpdatedTicketField.Priority:
+                        var priority = await _dbContext.TicketPriorities.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value && s.CompanyId == companyId);
+                        if (priority != null)
+                        {
+                            entry.TicketPriorityId = priority.Id;
+                        }
+                        break;
+                    case UpdatedTicketField.Status:
+                        var status = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value && s.CompanyId == companyId);
+                        if (status != null)
+                        {
+                            entry.TicketStatusId = status.Id;
+                            entry.IsClosed = status.IsCompletion;
+                        }
+                        break;
+                    case UpdatedTicketField.Queue:
+                        var queue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value && s.CompanyId == companyId);
+                        if (queue != null)
+                        {
+                            entry.TicketQueueId = queue.Id;
+                        }
+                        break;
+                    case UpdatedTicketField.Category:
+                        var category = await _dbContext.TicketCategories.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value && s.CompanyId == companyId);
+                        if (category != null)
+                        {
+                            entry.TicketCategoryId = category.Id;
+                        }
+                        break;
+                    case UpdatedTicketField.Resolution:
+                        var resolution = await _dbContext.TicketResolutions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Value && s.CompanyId == companyId);
+                        if (resolution != null)
+                        {
+                            entry.TicketResolutionId = resolution.Id;
+                        }
+                        break;
+                }
 
-        //        var defaultCategory = await _dbContext.TicketCategories.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault);
-        //        if (defaultCategory == null)
-        //        {
-        //            return BadRequest();
-        //        }
+                entry.DateModified = DateTimeOffset.UtcNow;
 
-        //        var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
-        //        if (user == null)
-        //        {
-        //            user = new User
-        //            {
-        //                Phone = request.Phone,
-        //                Email = null,
-        //                FirstName = request.FirstName ?? request.Phone,
-        //                LastName = request.LastName ?? "",
-        //                Permissions = domain.Enums.Permissions.User,
-        //                IsLocked = false,
-        //                DateCreated = DateTimeOffset.Now,
-        //                DateModified = DateTimeOffset.Now
-        //            };
-        //            await _dbContext.Users.AddAsync(user);
-        //            await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync();
 
-        //            try
-        //            {
-        //                var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-        //                await firebaseAuth.CreateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-        //                {
-        //                    PhoneNumber = request.Phone,
-        //                    DisplayName = request.Phone,
-        //                    Password = Guid.NewGuid().ToString()
-        //                });
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                _logger.LogError(ex, ex.Message);
-        //            }
-        //        }
+                var result = await Get(entry.Id, new TicketQueryRequest { IsUserView = false });
 
-        //        if (user.IsLocked)
-        //        {
-        //            return BadRequest();
-        //        }
+                return new BaseCommandResponse<ITicketModel>
+                {
+                    Data = result.Data,
+                    IsSuccess = result.IsSuccess,
+                    Code = result.Code,
+                    ErrorMessage = result.ErrorMessage
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<ITicketModel>();
+                response.HandleException(ex);
+            }
 
-        //        var entry = new Ticket
-        //        {
-        //            Name = HttpUtility.HtmlAttributeEncode(request.Name),
-        //            Token = Guid.NewGuid().ToString(),
-        //            Source = TicketSource.Telegram,
-        //            IsClosed = false,
-        //            DateCreated = DateTimeOffset.Now,
-        //            DateModified = DateTimeOffset.Now,
-        //            ReporterId = user.Id,
-        //            TicketQueueId = defaultQueue.Id,
-        //            TicketStatusId = defaultStatus.Id,
-        //            TicketCategoryId = defaultCategory.Id,
-        //            TicketObservations = new List<TicketObservation>
-        //            {
-        //                new TicketObservation
-        //                {
-        //                    DateCreated = DateTimeOffset.Now,
-        //                    UserId = user.Id
-        //                }
-        //            }
-        //        };
-        //        if (!string.IsNullOrWhiteSpace(request.Text) || request.Files?.Any() == true)
-        //        {
-        //            var ticketComment = new TicketComment
-        //            {
-        //                Ticket = entry,
-        //                Text = HttpUtility.HtmlAttributeEncode(request.Text),
-        //                IsInternal = false,
-        //                IsActive = true,
-        //                DateCreated = DateTimeOffset.Now,
-        //                DateModified = DateTimeOffset.Now,
-        //                CreatorId = user.Id,
-        //            };
-        //            entry.TicketComments.Add(ticketComment);
-
-        //            if (request.Files?.Any() == true)
-        //            {
-        //                var botClient = new TelegramBotClient(_settings.TelegramToken);
-        //                foreach (var file in request.Files)
-        //                {
-        //                    using var fileStream = new MemoryStream();
-        //                    var fileInfo = await botClient.GetInfoAndDownloadFileAsync(
-        //                        fileId: file,
-        //                        destination: fileStream,
-        //                        cancellationToken: CancellationToken.None);
-
-        //                    var fileName = Path.GetFileName(fileInfo.FilePath);
-        //                    var ext = Path.GetExtension(fileName).Trim('.').ToLower();
-        //                    var ticketCommentAttachment = new TicketCommentAttachment
-        //                    {
-        //                        TicketComment = ticketComment,
-        //                        DateCreated = DateTimeOffset.Now,
-        //                        DateModified = DateTimeOffset.Now,
-        //                        IsActive = true,
-        //                        OriginalFileName = fileName,
-        //                        Extension = ext,
-        //                        FileName = Guid.NewGuid().ToString()
-        //                    };
-        //                    ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
-
-        //                    var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
-        //                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-        //                    using (var stream = System.IO.File.Create(path))
-        //                    {
-        //                        fileStream.Seek(0, SeekOrigin.Begin);
-        //                        await fileStream.CopyToAsync(stream);
-        //                    }
-        //                }
-        //            }
-        //        }
-
-        //        await _dbContext.Tickets.AddAsync(entry).ConfigureAwait(false);
-        //        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-
-        //        var link = $"https://{_settings.Host}/tickets/{entry.Id}/alt/?token={entry.Token}";
-        //        return Ok(new { link });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, ex.Message);
-        //        return BadRequest();
-        //    }
-        //}
-
-        //[HttpPost("telegram/list")]
-        //public async Task<IActionResult> ListByTelegram([FromBody] TicketTelegramQueryRequest request)
-        //{
-        //    if (request == null || request.ApiKey != _settings.ApiKey)
-        //    {
-        //        return BadRequest();
-        //    }
-
-        //    try
-        //    {
-        //        var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Phone == request.Phone);
-        //        if (user == null || user.IsLocked)
-        //        {
-        //            return BadRequest();
-        //        }
-
-        //        var tickets = await _dbContext.Tickets.AsNoTracking().Where(s => s.ReporterId == user.Id && s.Source == TicketSource.Telegram)
-        //            .OrderByDescending(s => s.DateCreated).Take(10).ToListAsync();
-
-        //        return Ok(new { data = tickets.Select(s => new { name = s.Name, dateCreated = s.DateCreated, link = $"https://{_settings.Host}/tickets/{s.Id}/alt/?token={s.Token}" }) });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, ex.Message);
-        //        return BadRequest();
-        //    }
-        //}
+            return response;
+        }
 
         [HttpPost("{id}/comments")]
         public async Task<IBaseCommandResponse<int>> CreateComment(int id, [FromQuery] string token, [FromForm] TicketCommentCreateCommandRequest request)
@@ -731,77 +716,5 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
             }
             return response;
         }
-
-        //[Authorize(Policy = AuthConstants.AdminPolicy)]
-        //[HttpPut]
-        //public async Task<IBaseCommandResponse<bool>> Update([FromBody] QueueUpdateCommandRequest request)
-        //{
-        //    if (request == null)
-        //    {
-        //        return new BaseCommandResponse<bool>
-        //        {
-        //            IsSuccess = false,
-        //            Code = ResponseCodes.BadRequest
-        //        };
-        //    }
-
-        //    IBaseCommandResponse<bool> response = default;
-
-        //    try
-        //    {
-        //        if (await _dbContext.TicketQueues.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
-        //        {
-        //            return new BaseCommandResponse<bool>
-        //            {
-        //                IsSuccess = false,
-        //                Code = ResponseCodes.BadRequest,
-        //                ErrorMessage = $"Запись с названием {request.Name} уже существует.",
-        //                Data = false
-        //            };
-        //        }
-
-        //        if (request.IsDefault && await _dbContext.TicketQueues.AnyAsync(s => s.IsDefault && s.Id != request.Id).ConfigureAwait(false))
-        //        {
-        //            return new BaseCommandResponse<bool>
-        //            {
-        //                IsSuccess = false,
-        //                Code = ResponseCodes.BadRequest,
-        //                ErrorMessage = $"Первичная очередь уже существует.",
-        //                Data = false
-        //            };
-        //        }
-
-        //        var entry = await _dbContext.TicketQueues.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
-        //        if (entry == null)
-        //        {
-        //            return new BaseCommandResponse<bool>
-        //            {
-        //                IsSuccess = false,
-        //                Code = ResponseCodes.NotFound,
-        //                Data = false
-        //            };
-        //        }
-
-        //        entry.Name = request.Name;
-        //        entry.IsDefault = request.IsDefault;
-        //        entry.IsActive = request.IsActive;
-        //        entry.DateModified = DateTimeOffset.Now;
-
-        //        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-        //        response = new BaseCommandResponse<bool>
-        //        {
-        //            IsSuccess = true,
-        //            Code = ResponseCodes.Success,
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, ex.Message);
-        //        response = new BaseCommandResponse<bool>();
-        //        response.HandleException(ex);
-        //    }
-        //    return response;
-        //}
     }
 }

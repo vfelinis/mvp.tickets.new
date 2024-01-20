@@ -1,6 +1,7 @@
 export class ApiRoutesHelper {
     static user = {
         report: '/api/users/report/',
+        assignees: '/api/users/assignees/',
         create: '/api/users/',
         get: (id: number) : string => `/api/users/${id}/`,
         update: (id: number) : string => `/api/users/${id}/`,
@@ -26,6 +27,8 @@ export class ApiRoutesHelper {
         create: '/api/tickets/',
         get: (id: number) : string => `/api/tickets/${id}/`,
         createComment: (id: number) : string => `/api/tickets/${id}/comments/`,
+        close: (id: number) : string => `/api/tickets/${id}/close/`,
+        update: (id: number) : string => `/api/tickets/${id}/`,
     };
 
     static invite = {

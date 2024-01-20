@@ -132,32 +132,32 @@ WHERE u.""{nameof(User.CompanyId)}"" = @companyId";
                         if (string.Equals(search.Key, nameof(User.Email), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchByEmal", search.Value.ToLower(), DbType.String);
-                            query += $@" AND ""{nameof(User.Email)}"" = @searchByEmal";
+                            query += $@" AND u.""{nameof(User.Email)}"" = @searchByEmal";
                         }
                         else if (string.Equals(search.Key, nameof(User.FirstName), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchByFirstName", search.Value, DbType.String);
-                            query += $@" AND ""{nameof(User.FirstName)}"" = @searchByFirstName";
+                            query += $@" AND u.""{nameof(User.FirstName)}"" = @searchByFirstName";
                         }
                         else if (string.Equals(search.Key, nameof(User.LastName), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchByLastName", search.Value, DbType.String);
-                            query += $@" AND ""{nameof(User.LastName)}"" = @searchByLastName";
+                            query += $@" AND u.""{nameof(User.LastName)}"" = @searchByLastName";
                         }
                         else if (string.Equals(search.Key, nameof(User.IsLocked), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchByIsLocked", Convert.ToBoolean(search.Value), DbType.Boolean);
-                            query += $@" AND ""{nameof(User.IsLocked)}"" = @searchByIsLocked";
+                            query += $@" AND u.""{nameof(User.IsLocked)}"" = @searchByIsLocked";
                         }
                         else if (string.Equals(search.Key, nameof(User.Permissions), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchByPermissions", Convert.ToInt32(search.Value), DbType.Int32);
-                            query += $@" AND (""{nameof(User.Permissions)}"" & @searchByPermissions) = @searchByPermissions";
+                            query += $@" AND (u.""{nameof(User.Permissions)}"" & @searchByPermissions) = @searchByPermissions";
                         }
                         else if (string.Equals(search.Key, nameof(User.Id), StringComparison.OrdinalIgnoreCase))
                         {
                             parameter.Add("@searchById", Convert.ToInt32(search.Value), DbType.Int32);
-                            query += $@" AND ""{nameof(User.Id)}"" = @searchById";
+                            query += $@" AND u.""{nameof(User.Id)}"" = @searchById";
                         }
                     }
                 }
@@ -166,7 +166,7 @@ WHERE u.""{nameof(User.CompanyId)}"" = @companyId";
                 parameter.Add("@limit", ReportConstants.DEFAULT_LIMIT, DbType.Int32);
                 query +=
 $@"
-ORDER BY ""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(User.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit";
+ORDER BY u.""{typeof(User).GetProperties().FirstOrDefault(s => s.Name == request.SortBy)?.Name ?? nameof(User.Id)}"" {request.SortDirection} OFFSET @offset LIMIT @limit";
                 
                 var result = await connection.QueryAsync<UserReportModel>(query, param: parameter);
                 var entries = result.ToList();

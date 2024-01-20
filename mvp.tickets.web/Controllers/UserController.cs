@@ -6,11 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
 using mvp.tickets.data.Models;
 using mvp.tickets.domain.Constants;
+using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
 using mvp.tickets.domain.Stores;
+using Org.BouncyCastle.Asn1.Ocsp;
 using System.Security.Claims;
 
 namespace mvp.tickets.web.Controllers
@@ -599,6 +601,43 @@ namespace mvp.tickets.web.Controllers
                 response = new BaseCommandResponse<bool>();
                 response.HandleException(ex);
             }
+            return response;
+        }
+
+        [Authorize(Policy = AuthConstants.EmployeePolicy)]
+        [HttpGet("assignees")]
+        public async Task<IBaseQueryResponse<IEnumerable<IUserAssigneeModel>>> GetAssignees()
+        {
+            IBaseQueryResponse<IEnumerable<IUserAssigneeModel>> response = default;
+            try
+            {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var query = _dbContext.Users.AsNoTracking().Where(s => s.CompanyId == companyId && !s.IsLocked
+                        && s.Permissions.HasFlag(Permissions.Employee))
+                    .Select(s => new UserAssigneeModel
+                    {
+                        Id = s.Id,
+                        Name = s.FirstName + " " + s.LastName + " (" + s.Email + ")",
+                    });
+
+                var str = query.ToQueryString();
+
+                var entries = await query.ToListAsync();
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                response = new BaseQueryResponse<IEnumerable<IUserAssigneeModel>>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = entries.OrderByDescending(s => s.Id == userId).ThenBy(s => s.Name).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseQueryResponse<IEnumerable<IUserAssigneeModel>>();
+                response.HandleException(ex);
+            }
+
             return response;
         }
     }

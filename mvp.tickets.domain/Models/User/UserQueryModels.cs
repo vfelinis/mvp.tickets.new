@@ -41,4 +41,16 @@ namespace mvp.tickets.domain.Models
         public DateTimeOffset DateModified { get; set; }
         public int CompanyId { get; set; }
     }
+
+    public interface IUserAssigneeModel
+    {
+        int Id { get; set; }
+        string Name { get; set; }
+    }
+
+    public record UserAssigneeModel : IUserAssigneeModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
 }
