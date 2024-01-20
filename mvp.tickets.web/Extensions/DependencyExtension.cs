@@ -39,7 +39,7 @@ namespace mvp.tickets.web.Extensions
                 options.AddPolicy(AuthConstants.AdminPolicy, policy => policy.RequireClaim(AuthConstants.AdminClaim));
                 options.AddPolicy(AuthConstants.EmployeePolicy, policy => policy.RequireClaim(AuthConstants.EmployeeClaim));
                 options.AddPolicy(AuthConstants.UserPolicy, policy => policy.RequireClaim(AuthConstants.UserClaim));
-                options.AddPolicy(AuthConstants.RootSpacePolicy, policy => policy.RequireClaim(AuthConstants.RootSpacePolicy));
+                options.AddPolicy(AuthConstants.RootSpacePolicy, policy => policy.RequireClaim(AuthConstants.RootSpaceClaim));
             });
 
             services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, EmailBackgroundSearvice>();
@@ -72,6 +72,7 @@ namespace mvp.tickets.web.Extensions
                 Host = config.GetValue<string>("Host"),
                 ApiKey = config.GetValue<string>("ApiKey"),
                 TelegramToken = config.GetValue<string>("TelegramToken"),
+                FilesPath = config.GetValue<string>("FilesPath"),
             };
             services.AddSingleton<ISettings>(settings);
         }

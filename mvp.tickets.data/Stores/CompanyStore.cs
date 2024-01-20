@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using mvp.tickets.data.Models;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Stores;
@@ -17,9 +18,21 @@ namespace mvp.tickets.data.Stores
             _connectionStrings = connectionStrings ?? ThrowHelper.ArgumentNull<IConnectionStrings>();
         }
 
-        public async Task<int?> GetIdByHost(string host)
+        public async Task<CompanyModel> GetByHost(string host)
         {
-            return await _dbContext.Companies.Where(x => x.Host == host && x.IsActive).Select(s => s.Id).FirstOrDefaultAsync();
+            return await _dbContext.Companies.Where(x => x.Host == host && x.IsActive)
+                .Select(s => new CompanyModel
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Host = s.Host,
+                    IsActive = s.IsActive,
+                    IsRoot = s.IsRoot,
+                    DateCreated = s.DateCreated,
+                    DateModified = s.DateModified,
+                    Logo = s.Logo,
+                    Color = s.Color
+                }).FirstOrDefaultAsync();
         }
     }
 }

@@ -12,16 +12,28 @@ export class CompanyStore {
     isLoading: boolean;
     report: ICompanyModel[];
     company: ICompanyModel | null;
+    current: ICompanyModel;
 
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
         this.isLoading = false;
         this.report = [];
         this.company = null;
+        this.current = {
+            id: 0,
+            name: '',
+            host: '',
+            isActive: true,
+            isRoot: false,
+            dateCreated: new Date(),
+            logo: null,
+            color : '#1976d2'
+        };
         makeObservable(this, {
             isLoading: observable,
             report: observable,
             company: observable,
+            current: observable,
             setReport: action,
             getReport: action,
             create: action,
@@ -29,6 +41,7 @@ export class CompanyStore {
             setCompany: action,
             getDataForUpdateForm: action,
             update: action,
+            setCurrent: action,
         });
     }
 
@@ -42,6 +55,10 @@ export class CompanyStore {
 
     setCompany(entry: ICompanyModel | null) : void {
         this.company = entry;
+    }
+
+    setCurrent(entry: ICompanyModel) : void {
+        this.current = entry;
     }
 
     getReport() : void {
@@ -62,9 +79,9 @@ export class CompanyStore {
             })
     }
 
-    create(request: ICompanyCreateCommandRequest) : void {
+    create(request: FormData) : void {
         this.setIsLoading(true);
-        axios.post<IBaseCommandResponse<string>>(ApiRoutesHelper.company.create, request)
+        axios.post<IBaseCommandResponse<string>>(ApiRoutesHelper.company.create, request, { headers: { "Content-Type": "multipart/form-data" } })
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
@@ -118,12 +135,13 @@ export class CompanyStore {
             })
     }
 
-    update(request: ICompanyUpdateCommandRequest) : void {
+    update(id: number, request: FormData) : void {
         this.setIsLoading(true);
-        axios.put<IBaseCommandResponse<boolean>>(ApiRoutesHelper.company.update(request.id), request)
+        axios.put<IBaseCommandResponse<ICompanyModel>>(ApiRoutesHelper.company.update(id), request, { headers: { "Content-Type": "multipart/form-data" } })
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
+                    this.setCurrent(response.data.data);
                     browserHistory.push(UIRoutesHelper.home.getRoute());
                 } else {
                     this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());

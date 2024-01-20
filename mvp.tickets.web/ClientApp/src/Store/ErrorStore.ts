@@ -16,7 +16,7 @@ export class ErrorStore {
     }
 
     setError(error: string): void {
-        this.errors = [...this.errors, error];
+        this.errors = [...this.errors.filter(s => s !== error), error];
     }
 
     clearErrors(index?: number): void {

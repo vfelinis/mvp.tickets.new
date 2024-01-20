@@ -66,8 +66,8 @@ namespace mvp.tickets.domain.Services
             try
             {
                 
-                var companyId = await _companyStore.GetIdByHost(request.Host);
-                if (companyId == null)
+                var company = await _companyStore.GetByHost(request.Host);
+                if (company == null)
                 {
                     return new BaseCommandResponse<(IUserModel user, List<Claim> claims)>
                     {
@@ -79,7 +79,7 @@ namespace mvp.tickets.domain.Services
 
                 var email = request.Email;
                 var password = HashHelper.GetSHA256Hash(request.Password);
-                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password, CompanyId = companyId.Value }).ConfigureAwait(false);
+                var userResponse = await _userStore.Query(new UserQueryRequest { Email = email, Password = password, CompanyId = company.Id }).ConfigureAwait(false);
                 IUserModel userModel = userResponse.Data;
                 if (userResponse.Code == ResponseCodes.NotFound)
                 {
@@ -106,14 +106,15 @@ namespace mvp.tickets.domain.Services
                 {
                     new Claim(ClaimTypes.Sid, userModel.Id.ToString()),
                     new Claim(AuthConstants.CompanyIdClaim, userModel.CompanyId.ToString()),
+                    new Claim(AuthConstants.UserDataClaim, System.Text.Json.JsonSerializer.Serialize(userModel)),
                 };
 
                 if (userModel.Permissions.HasFlag(Permissions.Admin))
                 {
                     claims.Add(new Claim(AuthConstants.AdminClaim, "true"));
-                    if (userModel.IsRootCompany)
+                    if (company.IsRoot)
                     {
-                        claims.Add(new Claim(AuthConstants.RootSpacePolicy, "true"));
+                        claims.Add(new Claim(AuthConstants.RootSpaceClaim, "true"));
                     }
                 }
                 if (userModel.Permissions.HasFlag(Permissions.Employee))

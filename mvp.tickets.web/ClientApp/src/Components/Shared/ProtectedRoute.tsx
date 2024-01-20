@@ -5,11 +5,13 @@ import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { hasPermission, Permissions } from '../../Enums/Permissions';
 import { useRootStore } from '../../Store/RootStore';
 import { IUserModel } from '../../Models/User';
+import { ICompanyModel } from '../../Models/Company';
 
 interface IProtectedRouteProps {
     permissions: Permissions,
     children: JSX.Element,
     user: IUserModel | null,
+    company: ICompanyModel,
     onlyRoot?: boolean
 }
 
@@ -20,7 +22,7 @@ const ProtectedRoute: FC<IProtectedRouteProps> = (props) => {
         return <Navigate to={UIRoutesHelper.login.getRoute()} replace={true} />;
     }
     else if ((props.onlyRoot !== true && !hasPermission(user.permissions, props.permissions))
-        || (props.onlyRoot === true && !user.isRootCompany && !hasPermission(user.permissions, props.permissions))) {
+        || (props.onlyRoot === true && !props.company.isRoot && !hasPermission(user.permissions, props.permissions))) {
         return <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} />;
     }
     return props.children;

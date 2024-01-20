@@ -52,15 +52,24 @@ import MetricsView from './Components/Views/Root/Metric/MetricsView';
 import InvitesCreateView from './Components/Views/Root/Invite/InvitesCreateView';
 import CompaniesCreateView from './Components/Views/CompaniesCreateView';
 import AdminCompanyUpdateView from './Components/Views/Admin/Company/AdminCompanyUpdateView';
+import RegisterRequestView from './Components/Views/RegisterRequestView';
+import EmailConfirmationView from './Components/Views/EmailConfirmationView';
+import ForgotPasswordView from './Components/Views/ForgotPasswordView';
+import ResetPasswordView from './Components/Views/ResetPasswordView';
+import RegisterView from './Components/Views/RegisterView';
+import { ICompanyModel } from './Models/Company';
 
 interface IAppProps {
-  user: IUserModel | null
+  company: ICompanyModel,
+  user: IUserModel | null,
 }
 
 export const App: FC<IAppProps> = (props) => {
   const store = useRootStore();
 
   useEffect(() => {
+    document.title = props.company.name;
+    store.companyStore.setCurrent(props.company);
     if (props.user !== null) {
       store.userStore.setCurrentUser(props.user);
     }
@@ -68,91 +77,74 @@ export const App: FC<IAppProps> = (props) => {
 
   const mainRoutes = {
     path: UIRoutesHelper.home.getRoute(),
-    element: <ProtectedRoute permissions={Permissions.None} children={<Layout />} user={props.user} />,
+    element: <Layout />,
     children: [
       { path: '*', element: <Navigate to={UIRoutesHelper.notFound.getRoute()} /> },
-      { path: UIRoutesHelper.home.path, element: <HomeView /> },
-      { path: UIRoutesHelper.tickets.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketsView />} user={props.user} /> },
-      { path: UIRoutesHelper.ticketsCreate.path, element: <ProtectedRoute permissions={Permissions.User} children={<CreateTicketView />} user={props.user} /> },
-      { path: UIRoutesHelper.ticketsDetail.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketDetailView />} user={props.user} /> },
-      { path: UIRoutesHelper.ticketsCommentCreate.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketsCommentCreateView />} user={props.user} /> },
+      { path: UIRoutesHelper.home.path, element: <ProtectedRoute permissions={Permissions.None} children={<HomeView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.tickets.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketsView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.ticketsCreate.path, element: <ProtectedRoute permissions={Permissions.User} children={<CreateTicketView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.ticketsDetail.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketDetailView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.ticketsCommentCreate.path, element: <ProtectedRoute permissions={Permissions.User} children={<TicketsCommentCreateView />} company={props.company} user={props.user} /> },
 
-      { path: UIRoutesHelper.adminUsers.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminUsersCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminUsersUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminUsers.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminUsersCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminUsersUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminUsersUpdateView />} company={props.company} user={props.user} /> },
 
-      { path: UIRoutesHelper.adminCategories.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminCategoriesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminCategoriesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminCategories.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminCategoriesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminCategoriesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCategoriesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminPriorities.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminPrioritiesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminPrioritiesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminPriorities.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminPrioritiesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminPrioritiesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminPrioritiesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminQueues.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminQueuesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminQueuesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminQueues.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminQueuesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminQueuesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminQueuesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminStatuses.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminStatusesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminStatusesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminStatuses.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminStatusesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminStatusesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminStatusesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminResolutions.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResolutionsCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResolutionsUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminResolutions.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResolutionsCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResolutionsUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResolutionsUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminResponseTemplateTypes.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResponseTemplateTypesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResponseTemplateTypesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplateTypes.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplateTypesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplateTypesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplateTypesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminResponseTemplates.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResponseTemplatesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesCreateView />} user={props.user} /> },
-      { path: UIRoutesHelper.adminResponseTemplatesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplates.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplatesCreate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesCreateView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.adminResponseTemplatesUpdate.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminResponseTemplatesUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.adminCompany.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCompanyUpdateView />} user={props.user} /> },
+      { path: UIRoutesHelper.adminCompany.path, element: <ProtectedRoute permissions={Permissions.Admin} children={<AdminCompanyUpdateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.employee.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesView />} user={props.user} /> },
-      { path: UIRoutesHelper.employeeTicketDetail.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketDetailView />} user={props.user} /> },
-      { path: UIRoutesHelper.employeeTicketCommentCreate.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketCommentCreateView />} user={props.user} /> },
+      { path: UIRoutesHelper.employee.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.employeeTicketDetail.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketDetailView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.employeeTicketCommentCreate.path, element: <ProtectedRoute permissions={Permissions.Employee} children={<EmployeesTicketCommentCreateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.invites.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<InvitesView />} user={props.user} /> },
-      { path: UIRoutesHelper.invitesCreate.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<InvitesCreateView />} user={props.user} /> },
+      { path: UIRoutesHelper.invites.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<InvitesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.invitesCreate.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<InvitesCreateView />} company={props.company} user={props.user} /> },
       
-      { path: UIRoutesHelper.companies.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<CompaniesView />} user={props.user} /> },
-      { path: UIRoutesHelper.metrics.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<MetricsView />} user={props.user} /> },
+      { path: UIRoutesHelper.companies.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<CompaniesView />} company={props.company} user={props.user} /> },
+      { path: UIRoutesHelper.metrics.path, element: <ProtectedRoute onlyRoot={true} permissions={Permissions.Admin} children={<MetricsView />} company={props.company} user={props.user} /> },
 
-      { path: UIRoutesHelper.notFound.path, element: <NotFoundView /> },
+      { path: UIRoutesHelper.notFound.path, element: <ProtectedRoute permissions={Permissions.None} children={<NotFoundView />} company={props.company} user={props.user} /> },
+      
+      { path: UIRoutesHelper.login.path, element: <LoginView /> },
+      { path: UIRoutesHelper.ticketsDetailAlt.path, element: <TicketDetailView /> },
+      { path: UIRoutesHelper.ticketsCommentCreateAlt.path, element: <TicketsCommentCreateView /> },
+      { path: UIRoutesHelper.companiesCreate.path, element: <CompaniesCreateView /> },
+      { path: UIRoutesHelper.registerRequest.path, element: <RegisterRequestView /> },
+      { path: UIRoutesHelper.register.path, element: <RegisterView /> },
+      { path: UIRoutesHelper.emailConfirmation.path, element: <EmailConfirmationView /> },
+      { path: UIRoutesHelper.forgotPassword.path, element: <ForgotPasswordView /> },
+      { path: UIRoutesHelper.resetPassword.path, element: <ResetPasswordView /> },
     ],
   };
-  const loginRoute = {
-    path: UIRoutesHelper.login.path,
-    element: <Layout />,
-    children: [
-      { path: '', element: <LoginView /> }
-    ]
-  };
-  const ticketDetailAltRoute = {
-    path: UIRoutesHelper.ticketsDetailAlt.path,
-    element: <Layout />,
-    children: [
-      { path: '', element: <TicketDetailView /> }
-    ]
-  };
-  const ticketsCommentCreateAltRoute = {
-    path: UIRoutesHelper.ticketsCommentCreateAlt.path,
-    element: <Layout />,
-    children: [
-      { path: '', element: <TicketsCommentCreateView /> }
-    ]
-  };
-  const companiesCreateRoute = {
-    path: UIRoutesHelper.companiesCreate.path,
-    element: <Layout />,
-    children: [
-      { path: '', element: <CompaniesCreateView /> }
-    ]
-  };
-  const routing = useRoutes([mainRoutes, loginRoute, ticketDetailAltRoute, ticketsCommentCreateAltRoute, companiesCreateRoute]);
+  
+  const routing = useRoutes([mainRoutes]);
 
   return <>{routing}</>;
 }

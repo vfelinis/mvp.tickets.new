@@ -259,7 +259,7 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
                                     Id = x.Id,
                                     DateCreated = x.DateCreated,
                                     OriginalFileName = x.OriginalFileName,
-                                    Path = $"/{TicketConstants.AttachmentFolder}/{s.CompanyId}/{c.CreatorId}/{x.FileName + "." + x.Extension}"
+                                    Path = $"/{AppConstants.TicketFilesFolder}/{s.CompanyId}/{c.CreatorId}/{x.FileName + "." + x.Extension}"
                                 }).ToList()
                             }).ToList()
                     }).FirstOrDefaultAsync();
@@ -403,7 +403,7 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {
@@ -697,7 +697,7 @@ ORDER BY ""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == request
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{companyId}/{ticket.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{ticket.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {

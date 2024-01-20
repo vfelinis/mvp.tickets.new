@@ -7,11 +7,9 @@ namespace mvp.tickets.data.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public bool IsRoot { get; set; }
-        //public string ContactName { get; set; }
-        //public string ContactEmail { get; set; }
-        //public string ContactPhone { get; set; }
         public string Host { get; set; }
-        //public bool IsDefaultHost { get; set; }
+        public string Logo { get; set; }
+        public string Color { get; set; }
         public bool IsActive { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
@@ -35,10 +33,9 @@ namespace mvp.tickets.data.Models
             modelBuilder.Entity<Company>(s =>
             {
                 s.Property(p => p.Name).IsRequired(true).HasMaxLength(100);
-                //s.Property(p => p.ContactName).IsRequired(false).HasMaxLength(100);
-                //s.Property(p => p.ContactEmail).IsRequired(false).HasMaxLength(250);
-                //s.Property(p => p.ContactPhone).IsRequired(false).HasMaxLength(20);
                 s.Property(p => p.Host).IsRequired(true).HasMaxLength(250);
+                s.Property(p => p.Logo).IsRequired(false).HasMaxLength(50);
+                s.Property(p => p.Color).IsRequired(true).HasMaxLength(50).HasDefaultValue("#1976d2");
             });
 
             modelBuilder.Entity<Company>()

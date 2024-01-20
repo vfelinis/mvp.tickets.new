@@ -8,7 +8,10 @@ namespace mvp.tickets.domain.Models
         string Name { get; set; }
         string Host { get; set; }
         bool IsActive { get; set; }
+        bool IsRoot { get; set; }
         DateTimeOffset DateCreated { get; set; }
+        string Logo { get; set; }
+        string Color { get; set; }
     }
 
     public record CompanyModel : ICompanyModel
@@ -17,6 +20,10 @@ namespace mvp.tickets.domain.Models
         public string Name { get; set; }
         public string Host { get; set; }
         public bool IsActive { get; set; }
+        public bool IsRoot { get; set; }
         public DateTimeOffset DateCreated { get; set; }
+        public DateTimeOffset DateModified { get; set; }
+        public string Logo { get; set; }
+        public string Color { get; set; }
     }
 }

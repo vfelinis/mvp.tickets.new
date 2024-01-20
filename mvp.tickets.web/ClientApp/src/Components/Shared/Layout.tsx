@@ -32,6 +32,7 @@ import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { hasPermission, Permissions } from '../../Enums/Permissions';
 import { CircularProgress, Menu, MenuItem } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 const drawerWidth = 240;
 
@@ -142,7 +143,13 @@ const Layout: FC<ILayoutProps> = (props) => {
         || store.inviteStore.isLoading
         || store.companyStore.isLoading;
 
-    return <>
+    return <ThemeProvider theme={createTheme({
+        palette: {
+            primary: {
+                main: store.companyStore.current.color,
+            },
+        },
+    })}>
         {isLoading && <Box sx={{
             position: 'absolute',
             display: 'flex',
@@ -164,14 +171,26 @@ const Layout: FC<ILayoutProps> = (props) => {
                         onClick={handleDrawerOpen}
                         edge="start"
                         sx={{
-                            marginRight: 5,
+                            marginRight: 2,
                             ...(open && { display: 'none' }),
                         }}
                     >
                         <MenuIcon />
                     </IconButton>
+                    {
+                        store.companyStore.current.logo &&
+                        <Box
+                            component="img"
+                            sx={{
+                                height: 32,
+                                marginRight: 2,
+                            }}
+                            alt="Logo"
+                            src={store.companyStore.current.logo}
+                        />
+                    }
                     <Typography variant="h6" noWrap component="div">
-                        MVP Tickets
+                        {store.companyStore.current.name}
                     </Typography>
                 </Toolbar>
             </AppBar>
@@ -355,7 +374,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                     </>
                 }
                 {
-                    store.userStore.currentUser != null && store.userStore.currentUser.isRootCompany &&
+                    store.userStore.currentUser != null && store.companyStore.current.isRoot &&
                     <>
                         <Divider />
                         <List>
@@ -447,7 +466,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                         </ListItem>
                     </List>
                 }
-                
+
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
                 <DrawerHeader />
@@ -455,7 +474,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                 <Outlet />
             </Box>
         </Box>
-    </>;
+    </ThemeProvider>;
 };
 
 export default observer(Layout);

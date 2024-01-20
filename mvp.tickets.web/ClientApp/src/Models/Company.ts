@@ -3,7 +3,10 @@ export interface ICompanyModel {
     name: string,
     host: string,
     isActive: boolean,
+    isRoot: boolean,
     dateCreated: Date,
+    logo: string | null,
+    color: string,
 }
 
 export interface ICompanyCreateCommandRequest
@@ -13,6 +16,7 @@ export interface ICompanyCreateCommandRequest
     email: string,
     password: string,
     code: string,
+    color: string,
 }
 
 export interface ICompanySetActiveCommandRequest
@@ -26,4 +30,7 @@ export interface ICompanyUpdateCommandRequest
     id: number,
     name: string,
     host: string,
+    color: string,
+    removeLogo: boolean,
+    logo: string | null
 }

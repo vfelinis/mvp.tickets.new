@@ -6,29 +6,42 @@ import { App } from './App'
 import { ApiRoutesHelper } from './Helpers/ApiRoutesHelper';
 import { IBaseQueryResponse } from './Models/Base';
 import { IUserModel } from './Models/User';
+import { ICompanyModel } from './Models/Company';
 
 export const browserHistory = createBrowserHistory({ window });
 
-const init = (user: IUserModel | null) => {
+const init = (company: ICompanyModel | null, user: IUserModel | null) => {
   const element = (
-    <HistoryRouter history={browserHistory}>
-      <App user={user} />
-    </HistoryRouter>
+    company !== null
+      ? <HistoryRouter history={browserHistory}>
+        <App company={company} user={user} />
+      </HistoryRouter>
+      : <>Неизвестное предприятие.</>
   );
 
   const container = document.getElementById('root');
   const root = createRoot(container!);
   root.render(element);
 };
-let user: IUserModel;
-axios.post<IBaseQueryResponse<IUserModel>>(ApiRoutesHelper.user.current)
+
+axios.get<IBaseQueryResponse<ICompanyModel>>(ApiRoutesHelper.company.current)
   .then(response => {
     if (response.data.isSuccess) {
-      init(response.data.data);
+      axios.get<IBaseQueryResponse<IUserModel>>(ApiRoutesHelper.user.current)
+        .then(userResponse => {
+          if (userResponse.data.isSuccess) {
+            init(response.data.data, userResponse.data.data);
+          } else {
+            init(response.data.data, null);
+          }
+        })
+        .catch(userError => {
+          init(response.data.data, null);
+        });
     } else {
-      init(null);
+      init(null, null);
     }
   })
   .catch(error => {
-    init(null);
+    init(null, null);
   });

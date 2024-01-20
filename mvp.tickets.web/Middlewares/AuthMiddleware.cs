@@ -1,4 +1,5 @@
 ﻿using Microsoft.Net.Http.Headers;
+using mvp.tickets.domain.Constants;
 
 namespace mvp.tickets.web.Middlewares
 {
@@ -16,7 +17,11 @@ namespace mvp.tickets.web.Middlewares
             var path = context.Request.Path.Value.Trim('/').ToLower();
             if (string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase)
                 && !path.StartsWith("api")
-                && !path.StartsWith("login")
+                && !path.StartsWith(AppConstants.TicketFilesFolder)
+                && !path.StartsWith(AppConstants.LogoFilesFolder)
+                && path != "login"
+                && path != "register"
+                && path != "resetPassword"
                 && !context.Request.Query.ContainsKey("token")
                 && !context.User.Identity.IsAuthenticated)
             {

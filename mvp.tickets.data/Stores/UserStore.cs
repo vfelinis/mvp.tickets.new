@@ -65,17 +65,17 @@ namespace mvp.tickets.data.Stores
             {
                 if (request.Password != null)
                 {
-                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()
+                    user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower()
                         && s.Password == request.Password && s.CompanyId == request.CompanyId).ConfigureAwait(false);
                 }
                 else
                 {
-                    user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower() && s.CompanyId == request.CompanyId).ConfigureAwait(false);
+                    user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == request.Email.ToLower() && s.CompanyId == request.CompanyId).ConfigureAwait(false);
                 }
             }
             else if (request?.Id != null)
             {
-                user = await _dbContext.Users.Include(s => s.Company).AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompanyId).ConfigureAwait(false);
+                user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == request.CompanyId).ConfigureAwait(false);
             }
 
             if (user != null)
@@ -93,7 +93,6 @@ namespace mvp.tickets.data.Stores
                     DateCreated = user.DateCreated,
                     DateModified = user.DateModified,
                     CompanyId = user.CompanyId,
-                    IsRootCompany = user.Company.IsRoot
                 };
             }
             else

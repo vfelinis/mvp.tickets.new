@@ -1,13 +1,8 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using mvp.tickets.domain.Models.Identity;
+using mvp.tickets.domain.Models;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace mvp.tickets.domain.Helpers
 {
@@ -15,7 +10,7 @@ namespace mvp.tickets.domain.Helpers
     {
         private static string Secret = "MEgCQQC4u3aB2VLtTEgG0gBE6ptHr3lRfmxxXR4Eruec+WIdMkZZk4so7ruIaGbZUfi5BhyLMbI3EUe7nvCJL+ulOAPRAgMBAAE=";
 
-        public static string GenerateToken(JWTUserdata userData, int expirationMinutes)
+        public static string GenerateToken(UserRegisterRequestData userData, int expirationMinutes)
         {
             byte[] key = Convert.FromBase64String(Secret);
             SymmetricSecurityKey securityKey = new SymmetricSecurityKey(key);
@@ -67,7 +62,7 @@ namespace mvp.tickets.domain.Helpers
             }
         }
 
-        public static JWTUserdata ValidateToken(string token)
+        public static UserRegisterRequestData ValidateToken(string token)
         {
             var identity = GetTokenData(token);
             if (identity == null)
@@ -75,10 +70,10 @@ namespace mvp.tickets.domain.Helpers
 
             Claim UserDataClaim = identity.FindFirst(ClaimTypes.UserData);
 
-            JWTUserdata userData;
+            UserRegisterRequestData userData;
             try
             {
-                userData = JsonConvert.DeserializeObject<JWTUserdata>(UserDataClaim.Value);
+                userData = JsonConvert.DeserializeObject<UserRegisterRequestData>(UserDataClaim.Value);
             }
             catch
             {

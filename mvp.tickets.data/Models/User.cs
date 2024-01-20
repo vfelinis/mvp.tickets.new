@@ -42,7 +42,7 @@ namespace mvp.tickets.data.Models
                 s.Property(p => p.Phone).IsRequired(false).HasMaxLength(20);
                 s.Property(p => p.FirstName).IsRequired(true).HasMaxLength(50);
                 s.Property(p => p.LastName).IsRequired(true).HasMaxLength(50);
-                s.Property(p => p.Password).IsRequired(false).HasMaxLength(500);
+                s.Property(p => p.Password).IsRequired(true).HasMaxLength(500);
             });
 
             modelBuilder.Entity<User>()

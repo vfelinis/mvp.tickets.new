@@ -27,7 +27,6 @@ namespace mvp.tickets.domain.Models
         DateTimeOffset DateCreated { get; set; }
         DateTimeOffset DateModified { get; set; }
         int CompanyId { get; set; }
-        bool IsRootCompany { get; set; }
     }
 
     public record UserModel: IUserModel
@@ -41,6 +40,5 @@ namespace mvp.tickets.domain.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
         public int CompanyId { get; set; }
-        public bool IsRootCompany { get; set; }
     }
 }

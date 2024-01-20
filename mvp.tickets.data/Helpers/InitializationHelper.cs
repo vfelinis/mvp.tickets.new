@@ -42,7 +42,7 @@ namespace mvp.tickets.data.Helpers
                                     LastName = "Admin",
                                     IsLocked = false,
                                     Permissions = domain.Enums.Permissions.Admin | domain.Enums.Permissions.Employee | domain.Enums.Permissions.User,
-                                    Phone = "",
+                                    Phone = null,
                                     Password = HashHelper.GetSHA256Hash("123456"),
                                     DateCreated = DateTimeOffset.UtcNow,
                                     DateModified = DateTimeOffset.UtcNow

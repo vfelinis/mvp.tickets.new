@@ -205,6 +205,30 @@ export class UIRoutesHelper {
         getRoute: () => `/${this.login.path}/`,
     };
 
+    static registerRequest: IRoute = {
+        path: 'registerRequest',
+        getRoute: () => `/${this.registerRequest.path}/`,
+    };
+
+    static emailConfirmation: IRoute = {
+        path: 'emailConfirmation',
+        getRoute: () => `/${this.emailConfirmation.path}/`,
+    };
+
+    static forgotPassword: IRoute = {
+        path: 'forgotPassword',
+        getRoute: () => `/${this.forgotPassword.path}/`,
+    };
+
+    static resetPassword: IRoute = {
+        path: 'resetPassword',
+        getRoute: () => `/${this.resetPassword.path}/`,
+    };
+
+    static register: IRoute = {
+        path: 'register',
+        getRoute: () => `/${this.register.path}/`,
+    };
     
     static notFound: IRoute = {
         path: '404',

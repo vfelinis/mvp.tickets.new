@@ -1,13 +1,42 @@
 ﻿using mvp.tickets.domain.Enums;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace mvp.tickets.domain.Models
 {
+    public interface IUserRegisterRequestCommandRequest : IBaseCommandRequest
+    {
+        string Email { get; set; }
+    }
+    public record UserRegisterRequestCommandRequest : BaseCommandRequest, IUserRegisterRequestCommandRequest
+    {
+        [Required]
+        [EmailAddress]
+        [StringLength(maximumLength: 250)]
+        public string Email { get; set; }
+    }
+
+    public interface IUserRegisterCommandRequest : IBaseCommandRequest
+    {
+        string FirstName { get; set; }
+        string LastName { get; set; }
+        string Password { get; set; }
+        string Code { get; set; }
+    }
+    public record UserRegisterCommandRequest : BaseCommandRequest, IUserRegisterCommandRequest
+    {
+        [Required]
+        [StringLength(maximumLength: 50)]
+        public string FirstName { get; set; }
+        [Required]
+        [StringLength(maximumLength: 50)]
+        public string LastName { get; set; }
+        [Required]
+        [StringLength(maximumLength: 50)]
+        public string Password { get; set; }
+        [Required]
+        public string Code { get; set; }
+    }
+
     public interface IUserLoginCommandRequest: IBaseCommandRequest
     {
         string Email { get; set; }
@@ -46,6 +75,7 @@ namespace mvp.tickets.domain.Models
         public string LastName { get; set; }
         public Permissions Permissions { get; set; }
         public bool IsLocked { get; set; }
+        [StringLength(maximumLength: 50)]
         public string Password { get; set; }
     }
 
@@ -58,4 +88,32 @@ namespace mvp.tickets.domain.Models
     {
         public int Id { get; set; }
     }
+
+    public interface IUserFortogPasswordCommandRequest : IBaseCommandRequest
+    {
+        string Email { get; set; }
+    }
+    public record UserFortogPasswordCommandRequest : BaseCommandRequest, IUserFortogPasswordCommandRequest
+    {
+        [Required]
+        [EmailAddress]
+        [StringLength(maximumLength: 250)]
+        public string Email { get; set; }
+    }
+
+    public interface IUserResetPasswordCommandRequest : IBaseCommandRequest
+    {
+        string Password { get; set; }
+        string Code { get; set; }
+    }
+    public record UserResetPasswordCommandRequest : BaseCommandRequest, IUserResetPasswordCommandRequest
+    {
+        [Required]
+        [StringLength(maximumLength: 50)]
+        public string Password { get; set; }
+        [Required]
+        public string Code { get; set; }
+    }
+
+    public record UserRegisterRequestData(string Email, int CompanyId);
 }

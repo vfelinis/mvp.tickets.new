@@ -7,6 +7,10 @@ export class ApiRoutesHelper {
         current: '/api/users/current/',
         login: '/api/users/login/',
         logout: '/api/users/logout/',
+        registerRequest: '/api/users/registerRequest/',
+        register: '/api/users/register/',
+        forgotPassword: '/api/users/forgotPassword/',
+        resetPassword: '/api/users/resetPassword/',
         
     };
 
@@ -34,6 +38,7 @@ export class ApiRoutesHelper {
     static company = {
         report: '/api/companies/',
         create: '/api/companies/',
+        current: '/api/companies/current/',
         setActive: '/api/companies/activation/',
         get: (id: number) : string => `/api/companies/${id}/`,
         update: (id: number) : string => `/api/companies/${id}/`,

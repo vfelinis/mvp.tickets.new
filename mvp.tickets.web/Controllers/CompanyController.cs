@@ -8,6 +8,7 @@ using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
+using mvp.tickets.domain.Stores;
 
 namespace mvp.tickets.web.Controllers
 {
@@ -17,11 +18,57 @@ namespace mvp.tickets.web.Controllers
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly ILogger<CompanyController> _logger;
+        private readonly ISettings _settings;
 
-        public CompanyController(ApplicationDbContext dbContext, ILogger<CompanyController> logger)
+        public CompanyController(ApplicationDbContext dbContext, ILogger<CompanyController> logger, ISettings settings)
         {
             _dbContext = dbContext;
             _logger = logger;
+            _settings = settings;
+        }
+
+        [HttpGet("current")]
+        public async Task<IBaseQueryResponse<ICompanyModel>> Current([FromServices] ICompanyStore companyStore, [FromServices] IWebHostEnvironment env)
+        {
+            IBaseQueryResponse<ICompanyModel> response = default;
+            try
+            {
+                var host = Request.Host.Value.ToLower();
+                if (!env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var company = await companyStore.GetByHost(host);
+                if (company == null)
+                {
+                    return new BaseQueryResponse<ICompanyModel>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = null,
+                        ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                if (!string.IsNullOrWhiteSpace(company.Logo))
+                {
+                    company.Logo = $"/{AppConstants.LogoFilesFolder}/{company.Logo}?v={company.DateModified.Ticks}";
+                }
+                response = new BaseQueryResponse<ICompanyModel>
+                {
+                    IsSuccess = true,
+                    Code = domain.Enums.ResponseCodes.Success,
+                    Data = company,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseQueryResponse<ICompanyModel>();
+                response.HandleException(ex);
+            }
+            return response;
         }
 
         [Authorize(Policy = AuthConstants.RootSpacePolicy)]
@@ -59,7 +106,7 @@ namespace mvp.tickets.web.Controllers
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<IBaseCommandResponse<string>> Create([FromBody] CompanyCreateCommandRequest request)
+        public async Task<IBaseCommandResponse<string>> Create([FromForm] CompanyCreateCommandRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
             {
@@ -91,6 +138,7 @@ namespace mvp.tickets.web.Controllers
                     Host = $"{request.Host.ToLower()}.{AppConstants.DefaultHost}",
                     IsRoot = false,
                     IsActive = true,
+                    Color = request.Color,
                     DateCreated = DateTimeOffset.UtcNow,
                     DateModified = DateTimeOffset.UtcNow,
                     Users = new List<User>
@@ -99,7 +147,7 @@ namespace mvp.tickets.web.Controllers
                         {
                             FirstName = "Admin",
                             LastName = "Admin",
-                            Phone = "",
+                            Phone = null,
                             Email = request.Email.ToLower(),
                             Password = HashHelper.GetSHA256Hash(request.Password),
                             IsLocked = false,
@@ -123,6 +171,20 @@ namespace mvp.tickets.web.Controllers
                 _dbContext.Companies.Add(entry);
                 _dbContext.Invites.Remove(invite);
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+                if (request.Logo != null)
+                {
+                    var ext = Path.GetExtension(request.Logo.FileName).Trim('.').ToLower();
+                    entry.Logo = $"{entry.Id}.{ext}";
+                    var path = Path.Join(_settings.FilesPath, $"/{AppConstants.LogoFilesFolder}/{entry.Logo}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    using (var stream = System.IO.File.Create(path))
+                    {
+                        await request.Logo.CopyToAsync(stream);
+                    }
+                    
+                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                }
 
                 response = new BaseCommandResponse<string>
                 {
@@ -221,7 +283,9 @@ namespace mvp.tickets.web.Controllers
                         Name = entry.Name,
                         IsActive = entry.IsActive,
                         Host = entry.Host.Replace($".{AppConstants.DefaultHost}", ""),
-                        DateCreated = entry.DateCreated
+                        DateCreated = entry.DateCreated,
+                        Logo = entry.Logo != null ? $"/{AppConstants.LogoFilesFolder}/{entry.Logo}?v={entry.DateModified.Ticks}" : null,
+                        Color = entry.Color,
                     }
                 };
             }
@@ -237,23 +301,23 @@ namespace mvp.tickets.web.Controllers
 
         [Authorize(Policy = AuthConstants.AdminPolicy)]
         [HttpPut("{id}")]
-        public async Task<IBaseCommandResponse<bool>> Update([FromRoute] int id, [FromBody] CompanyUpdateCommandRequest request)
+        public async Task<IBaseCommandResponse<ICompanyModel>> Update([FromRoute] int id, [FromForm] CompanyUpdateCommandRequest request)
         {
             if (request == null)
             {
-                return new BaseCommandResponse<bool>
+                return new BaseCommandResponse<ICompanyModel>
                 {
                     IsSuccess = false,
                     Code = ResponseCodes.BadRequest
                 };
             }
 
-            IBaseCommandResponse<bool> response = default;
+            IBaseCommandResponse<ICompanyModel> response = default;
             try
             {
                 if (request.Id != int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value))
                 {
-                    return new BaseCommandResponse<bool>
+                    return new BaseCommandResponse<ICompanyModel>
                     {
                         IsSuccess = false,
                         Code = ResponseCodes.BadRequest
@@ -262,7 +326,7 @@ namespace mvp.tickets.web.Controllers
                 var entry = await _dbContext.Companies.FirstOrDefaultAsync(s => s.Id == request.Id && s.IsActive);
                 if (entry == null)
                 {
-                    return new BaseCommandResponse<bool>
+                    return new BaseCommandResponse<ICompanyModel>
                     {
                         IsSuccess = false,
                         Code = ResponseCodes.NotFound
@@ -272,20 +336,48 @@ namespace mvp.tickets.web.Controllers
                 entry.DateModified = DateTimeOffset.UtcNow;
                 entry.Name = request.Name;
                 entry.Host = $"{request.Host.ToLower()}.{AppConstants.DefaultHost}";
+                entry.Color = request.Color;
+
+                if (request.NewLogo != null)
+                {
+                    var ext = Path.GetExtension(request.NewLogo.FileName).Trim('.').ToLower();
+                    entry.Logo = $"{entry.Id}.{ext}";
+                    var path = Path.Join(_settings.FilesPath, $"/{AppConstants.LogoFilesFolder}/{entry.Logo}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    using (var stream = System.IO.File.Create(path))
+                    {
+                        await request.NewLogo.CopyToAsync(stream);
+                    }
+                }
+                else if (request.RemoveLogo)
+                {
+                    entry.Logo = null;
+                }
 
                 await _dbContext.SaveChangesAsync();
 
-                response = new BaseCommandResponse<bool>
+                response = new BaseCommandResponse<ICompanyModel>
                 {
                     IsSuccess = true,
                     Code = ResponseCodes.Success,
-                    Data = true
+                    Data = new CompanyModel
+                    {
+                        Id = entry.Id,
+                        Host = entry.Host,
+                        Name = entry.Name,
+                        Color = entry.Color,
+                        DateCreated = entry.DateCreated,
+                        DateModified = entry.DateModified,
+                        IsActive = entry.IsActive,
+                        IsRoot = entry.IsRoot,
+                        Logo = !string.IsNullOrWhiteSpace(entry.Logo) ? $"/{AppConstants.LogoFilesFolder}/{entry.Logo}?v={entry.DateModified.Ticks}" : null
+                    }
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                response = new BaseCommandResponse<bool>();
+                response = new BaseCommandResponse<ICompanyModel>();
                 response.HandleException(ex);
             }
 

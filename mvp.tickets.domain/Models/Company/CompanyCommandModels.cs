@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace mvp.tickets.domain.Models
 {
@@ -9,6 +10,8 @@ namespace mvp.tickets.domain.Models
         string Email { get; set; }
         string Password { get; set; }
         string Code { get; set; }
+        IFormFile Logo { get; set; }
+        string Color { get; set; }
     }
     public record CompanyCreateCommandRequest : BaseCommandRequest, ICompanyCreateCommandRequest
     {
@@ -27,6 +30,10 @@ namespace mvp.tickets.domain.Models
         [Required]
         [StringLength(100)]
         public string Code { get; set; }
+        public IFormFile Logo { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Color { get; set; }
     }
 
     public interface ICompanySetActiveCommandRequest : IBaseCommandRequest
@@ -46,6 +53,9 @@ namespace mvp.tickets.domain.Models
         int Id { get; set; }
         string Name { get; set; }
         string Host { get; set; }
+        IFormFile NewLogo { get; set; }
+        bool RemoveLogo { get; set; }
+        string Color { get; set; }
     }
     public record CompanyUpdateCommandRequest : BaseCommandRequest, ICompanyUpdateCommandRequest
     {
@@ -57,5 +67,10 @@ namespace mvp.tickets.domain.Models
         [Required]
         [StringLength(50)]
         public string Host { get; set; }
+        public IFormFile NewLogo { get; set; }
+        public bool RemoveLogo { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Color { get; set; }
     }
 }

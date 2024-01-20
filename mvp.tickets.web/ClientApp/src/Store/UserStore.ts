@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseReportQueryRequest, IBaseReportQueryResponse, IBaseCommandResponse, IBaseQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { IUserCreateCommandRequest, IUserLoginCommandRequest, IUserModel, IUserUpdateCommandRequest } from '../Models/User';
+import { IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
 import { browserHistory } from '..';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 
@@ -132,8 +132,10 @@ export class UserStore {
     }
 
     login(request: IUserLoginCommandRequest): void {
+        this.setIsLoading(true);
         axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, request)
             .then(response => {
+                this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     this.setCurrentUser(response.data.data);
 
@@ -142,13 +144,16 @@ export class UserStore {
                 }
             })
             .catch(error => {
+                this.setIsLoading(false);
                 this.rootStore.errorStore.setError(JSON.stringify(error));
             })
     }
 
     logout(): void {
+        this.setIsLoading(true);
         axios.post<IBaseCommandResponse<object>>(ApiRoutesHelper.user.logout)
             .then(response => {
+                this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     this.setCurrentUser(null);
 
@@ -157,6 +162,75 @@ export class UserStore {
                 }
             })
             .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    registerRequest(request: IUserRegisterRequestCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.registerRequest, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.emailConfirmation.getRoute());
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    register(request: IUserRegisterCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.register, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.login.getRoute());
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    forgotPassword(request: IUserForgotPasswordCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.forgotPassword, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.emailConfirmation.getRoute());
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    resetPassword(request: IUserResetPasswordCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.resetPassword, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.login.getRoute());
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
                 this.rootStore.errorStore.setError(JSON.stringify(error));
             })
     }

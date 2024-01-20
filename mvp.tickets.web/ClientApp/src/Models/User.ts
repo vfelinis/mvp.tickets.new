@@ -10,7 +10,6 @@ export interface IUserModel {
     dateCreated: Date,
     dateModified: Date,
     companyId: number,
-    isRootCompany: boolean,
 }
 
 export interface IUserCreateCommandRequest
@@ -32,4 +31,28 @@ export interface IUserLoginCommandRequest
 {
     email: string
     password: string
+}
+
+export interface IUserRegisterRequestCommandRequest
+{
+    email: string
+}
+
+export interface IUserRegisterCommandRequest
+{
+    firstName: string
+    lastName: string
+    password: string
+    code: string
+}
+
+export interface IUserForgotPasswordCommandRequest
+{
+    email: string
+}
+
+export interface IUserResetPasswordCommandRequest
+{
+    password: string
+    code: string
 }
