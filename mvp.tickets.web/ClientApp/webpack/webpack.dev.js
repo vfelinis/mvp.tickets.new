@@ -26,6 +26,10 @@ module.exports = {
         target: 'https://localhost:5101',
         secure: false,
       },
+      '/support': {
+        target: 'https://localhost:5101',
+        secure: false,
+      },
     },
     port: 8080,
     https: {

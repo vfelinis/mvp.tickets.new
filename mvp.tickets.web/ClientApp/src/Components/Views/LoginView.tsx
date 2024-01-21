@@ -1,6 +1,6 @@
 import { Box, Button, Typography } from '@mui/material';
-import { FC, useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { FC, useState, useEffect } from 'react';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { ValidatorForm, TextValidator } from 'react-material-ui-form-validator';
 
@@ -14,10 +14,18 @@ interface ILoginViewProps {
 
 const LoginView: FC<ILoginViewProps> = (props) => {
   const store = useRootStore();
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
   const [request, setRequest] = useState<IUserLoginCommandRequest>({
     email: '',
     password: '',
   });
+
+  useEffect(() => {
+    if (code) {
+      store.userStore.loginByCode({code: code});
+    }
+  }, []);
 
   const handleSubmit = () => {
     store.userStore.login(request);

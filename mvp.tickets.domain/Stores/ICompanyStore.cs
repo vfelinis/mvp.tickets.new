@@ -4,6 +4,6 @@ namespace mvp.tickets.domain.Stores
 {
     public interface ICompanyStore
     {
-        Task<CompanyModel> GetByHost(string host);
+        Task<ICompanyModel> GetByHost(string host);
     }
 }

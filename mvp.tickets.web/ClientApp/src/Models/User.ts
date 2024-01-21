@@ -33,6 +33,11 @@ export interface IUserLoginCommandRequest
     password: string
 }
 
+export interface IUserLoginByCodeCommandRequest
+{
+    code: string
+}
+
 export interface IUserRegisterRequestCommandRequest
 {
     email: string

@@ -7,6 +7,7 @@ export class ApiRoutesHelper {
         update: (id: number) : string => `/api/users/${id}/`,
         current: '/api/users/current/',
         login: '/api/users/login/',
+        loginByCode: '/api/users/loginByCode/',
         logout: '/api/users/logout/',
         registerRequest: '/api/users/registerRequest/',
         register: '/api/users/register/',

@@ -12,7 +12,6 @@ using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
 using mvp.tickets.domain.Stores;
-using Org.BouncyCastle.Asn1.Ocsp;
 using System.Security.Claims;
 
 namespace mvp.tickets.web.Controllers
@@ -118,7 +117,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var userData = new UserRegisterRequestData(email, company.Id);
+                var userData = new UserJWTData(email, company.Id, JWTType.Register);
                 var code = TokenHelper.GenerateToken(userData, 30);
                 await emailService.Send(email, $"{company.Name} - регистрация.",
                     $"Для продолжения регистрации перейдите по следующей ссылке <a href='https://{host}/register/?email={email}&code={code}'>нажмите здесь</a>", true);
@@ -157,7 +156,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var userData = TokenHelper.ValidateToken(request.Code);
-                if (userData == null)
+                if (userData == null || userData.Type != JWTType.Register)
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -234,28 +233,167 @@ namespace mvp.tickets.web.Controllers
         [HttpPost("login")]
         public async Task<IBaseCommandResponse<IUserModel>> Login(UserLoginCommandRequest request)
         {
-            if (request != null)
+            IBaseCommandResponse<IUserModel> response = default;
+            try
+            {
+                if (request != null)
+                {
+                    var host = Request.Host.Value.ToLower();
+                    if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                    {
+                        host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                    }
+                    request.Host = host;
+                }
+
+                var loginResponse = await _userService.Login(request);
+
+                if (loginResponse.IsSuccess)
+                {
+                    var claimsIdentity = new ClaimsIdentity(loginResponse.Data.claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+                }
+
+                response = new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = loginResponse.IsSuccess,
+                    Code = loginResponse.Code,
+                    ErrorMessage = loginResponse.ErrorMessage,
+                    Data = loginResponse.Data.user
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<IUserModel>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
+        [HttpPost("loginByCode")]
+        public async Task<IBaseCommandResponse<IUserModel>> LoginByCode(UserLoginByCodeCommandRequest request, [FromServices] ICompanyStore companyStore)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Code))
+            {
+                return new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = false,
+                    Code = ResponseCodes.BadRequest
+                };
+            }
+            IBaseCommandResponse<IUserModel> response = default;
+            try
             {
                 var host = Request.Host.Value.ToLower();
                 if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
-                request.Host = host;
-            }
-            var response = await _userService.Login(request);
-            if (response.IsSuccess)
-            {
-                var claimsIdentity = new ClaimsIdentity(response.Data.claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                var userData = TokenHelper.ValidateToken(request.Code);
+                if (userData == null || userData.Type != JWTType.Support)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Код доступа не действителен."
+                    };
+                }
+                var rootCompany = await companyStore.GetByHost(host);
+                if (!rootCompany.IsRoot)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Текущий хост не является основным."
+                    };
+                }
+                var userCompany = await _dbContext.Companies.AsNoTracking().FirstOrDefaultAsync(s => s.Id == userData.CompanyId && s.IsActive);
+                if (userCompany == null)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Некорректное предприятие."
+                    };
+                }
+                var user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == userData.Email && !s.IsLocked);
+                if (user == null || !user.Permissions.HasFlag(Permissions.Admin))
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Некорректный пользователь."
+                    };
+                }
+
+                var email = $"{userCompany.Id}@company";
+                var rootUser = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == rootCompany.Id);
+                if (rootUser == null)
+                {
+                    rootUser = new User
+                    {
+                        CompanyId = rootCompany.Id,
+                        Email = email,
+                        IsLocked = false,
+                        Password = HashHelper.GetSHA256Hash(Guid.NewGuid().ToString()),
+                        DateCreated = DateTimeOffset.UtcNow,
+                        DateModified = DateTimeOffset.UtcNow,
+                        Phone = null,
+                        Permissions = Permissions.User,
+                        FirstName = "Предприятие",
+                        LastName = userCompany.Name,
+                    };
+                    _dbContext.Users.Add(rootUser);
+                    await _dbContext.SaveChangesAsync();
+                }
+                else if (rootUser.IsLocked)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Пользователь заблокирован."
+                    };
+                }
+
+                var userModel = new UserModel
+                {
+                    Id = rootUser.Id,
+                    CompanyId = rootUser.CompanyId,
+                    Email = rootUser.Email,
+                    IsLocked = rootUser.IsLocked,
+                    Permissions = rootUser.Permissions,
+                    FirstName = rootUser.FirstName,
+                    LastName = rootUser.LastName,
+                    DateCreated = rootUser.DateCreated,
+                    DateModified = rootUser.DateModified,
+                };
+
+                var claims = UserHelper.GetClaims(userModel, rootCompany.IsRoot);
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+
+                response = new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = userModel
+                };
             }
-            return new BaseCommandResponse<IUserModel>
+            catch (Exception ex)
             {
-                IsSuccess = response.IsSuccess,
-                Code = response.Code,
-                ErrorMessage = response.ErrorMessage,
-                Data = response.Data.user
-            };
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<IUserModel>();
+                response.HandleException(ex);
+            }
+            return response;
         }
 
         [HttpPost("logout")]
@@ -504,7 +642,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var userData = new UserRegisterRequestData(email, company.Id);
+                var userData = new UserJWTData(email, company.Id, JWTType.ResetPassword);
                 var code = TokenHelper.GenerateToken(userData, 30);
                 await emailService.Send(email, $"{company.Name} - сброс пароля.",
                     $"Для сброса пароля перейдите по следующей ссылке <a href='https://{host}/resetPassword/?code={code}'>нажмите здесь</a>", true);
@@ -542,7 +680,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var userData = TokenHelper.ValidateToken(request.Code);
-                if (userData == null)
+                if (userData == null || userData.Type != JWTType.ResetPassword)
                 {
                     return new BaseCommandResponse<bool>
                     {

@@ -11,7 +11,7 @@ interface IProtectedRouteProps {
     permissions: Permissions,
     children: JSX.Element,
     user: IUserModel | null,
-    company: ICompanyModel,
+    company: ICompanyModel | null,
     onlyRoot?: boolean
 }
 
@@ -21,8 +21,10 @@ const ProtectedRoute: FC<IProtectedRouteProps> = (props) => {
     if (user === null) {
         return <Navigate to={UIRoutesHelper.login.getRoute()} replace={true} />;
     }
-    else if ((props.onlyRoot !== true && !hasPermission(user.permissions, props.permissions))
-        || (props.onlyRoot === true && !props.company.isRoot && !hasPermission(user.permissions, props.permissions))) {
+    else if (!hasPermission(user.permissions, props.permissions)) {
+        return <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} />;
+    }
+    else if (props.onlyRoot === true && props.company?.isRoot !== true) {
         return <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} />;
     }
     return props.children;

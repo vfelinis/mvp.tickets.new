@@ -18,7 +18,7 @@ namespace mvp.tickets.data.Stores
             _connectionStrings = connectionStrings ?? ThrowHelper.ArgumentNull<IConnectionStrings>();
         }
 
-        public async Task<CompanyModel> GetByHost(string host)
+        public async Task<ICompanyModel> GetByHost(string host)
         {
             return await _dbContext.Companies.Where(x => x.Host == host && x.IsActive)
                 .Select(s => new CompanyModel

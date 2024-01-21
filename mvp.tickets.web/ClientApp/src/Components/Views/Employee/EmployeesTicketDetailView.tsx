@@ -93,6 +93,32 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
         ? `${entry?.assigneeFirstName} ${entry?.assigneeLastName} (${entry?.assigneeEmail})`
         : '-';
     const priority = entry?.ticketPriority ?? '-';
+    const getEditableItem = (type: UpdatedTicketField, title: string, label: string, options: any[],
+        placeholder: string, currentValue: number | null | undefined): any =>
+        request.updatedField !== type
+            ? <>
+                {title}
+                <IconButton component={Button} onClick={() => handleEdit(type)}>
+                    <EditIcon />
+                </IconButton>
+            </>
+            : <>
+                <Autocomplete
+                    disablePortal
+                    options={options}
+                    defaultValue={{id: currentValue, name: placeholder}}
+                    getOptionLabel={option => option.name}
+                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderInput={(params) => <TextField {...params} label={label} />}
+                />
+                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0 || request.value === currentValue}>
+                    <SaveIcon />
+                </IconButton>
+                <IconButton component={Button} onClick={handleCancel}>
+                    <CloseIcon />
+                </IconButton>
+            </>;
     return <>
         <Typography variant="h4" component="div">
             Заявка № {entry?.id}
@@ -110,30 +136,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
             <ListItem>
                 <ListItemText>
                     {
-                        request.updatedField !== UpdatedTicketField.Assignee
-                            ? <>
-                                Назначено на: {assignee}
-                                <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Assignee)}>
-                                    <EditIcon />
-                                </IconButton>
-                            </>
-                            : <>
-                                <Autocomplete
-                                    disablePortal
-                                    options={store.userStore.assignees}
-                                    defaultValue={{ id: entry?.assigneeId ?? 0, name: assignee }}
-                                    getOptionLabel={option => option.name}
-                                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    renderInput={(params) => <TextField {...params} label="Назначено" />}
-                                />
-                                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                    <SaveIcon />
-                                </IconButton>
-                                <IconButton component={Button} onClick={handleCancel}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </>
+                        getEditableItem(UpdatedTicketField.Assignee, `Назначено на: ${assignee}`, 'Назначено',
+                            store.userStore.assignees, assignee, entry?.assigneeId)
                     }
                 </ListItemText>
             </ListItem>
@@ -165,30 +169,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
             <ListItem>
                 <ListItemText>
                     {
-                        request.updatedField !== UpdatedTicketField.Priority
-                            ? <>
-                                Приоритет: {priority}
-                                <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Priority)}>
-                                    <EditIcon />
-                                </IconButton>
-                            </>
-                            : <>
-                                <Autocomplete
-                                    disablePortal
-                                    options={store.priorityStore.entries}
-                                    defaultValue={{ id: entry?.ticketPriorityId ?? 0, name: priority, level: 0, isActive: false, dateCreated: new Date(), dateModified: new Date() }}
-                                    getOptionLabel={option => option.name}
-                                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    renderInput={(params) => <TextField {...params} label="Приоритет" />}
-                                />
-                                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                    <SaveIcon />
-                                </IconButton>
-                                <IconButton component={Button} onClick={handleCancel}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </>
+                        getEditableItem(UpdatedTicketField.Priority, `Приоритет: ${priority}`, 'Приоритет',
+                            store.priorityStore.entries, priority, entry?.ticketPriorityId)
                     }
                 </ListItemText>
             </ListItem>
@@ -196,30 +178,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
             <ListItem>
                 <ListItemText>
                     {
-                        request.updatedField !== UpdatedTicketField.Status
-                            ? <>
-                                Статус: {entry?.ticketStatus}
-                                <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Status)}>
-                                    <EditIcon />
-                                </IconButton>
-                            </>
-                            : <>
-                                <Autocomplete
-                                    disablePortal
-                                    options={store.statusStore.entries}
-                                    defaultValue={{ id: entry?.ticketStatusId ?? 0, name: entry?.ticketStatus ?? '', isCompletion: false, isDefault: false, isActive: false, dateCreated: new Date(), dateModified: new Date() }}
-                                    getOptionLabel={option => option.name}
-                                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    renderInput={(params) => <TextField {...params} label="Статус" />}
-                                />
-                                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                    <SaveIcon />
-                                </IconButton>
-                                <IconButton component={Button} onClick={handleCancel}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </>
+                        getEditableItem(UpdatedTicketField.Status, `Статус: ${entry?.ticketStatus}`, 'Статус',
+                            store.statusStore.entries, entry?.ticketStatus ?? '', entry?.ticketStatusId)
                     }
                 </ListItemText>
             </ListItem>
@@ -227,30 +187,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
             <ListItem>
                 <ListItemText>
                     {
-                        request.updatedField !== UpdatedTicketField.Queue
-                            ? <>
-                                Очередь: {entry?.ticketQueue}
-                                <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Queue)}>
-                                    <EditIcon />
-                                </IconButton>
-                            </>
-                            : <>
-                                <Autocomplete
-                                    disablePortal
-                                    options={store.queueStore.entries}
-                                    defaultValue={{ id: entry?.ticketQueueId ?? 0, name: entry?.ticketQueue ?? '', isDefault: false, isActive: false, dateCreated: new Date(), dateModified: new Date() }}
-                                    getOptionLabel={option => option.name}
-                                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    renderInput={(params) => <TextField {...params} label="Очередь" />}
-                                />
-                                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                    <SaveIcon />
-                                </IconButton>
-                                <IconButton component={Button} onClick={handleCancel}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </>
+                        getEditableItem(UpdatedTicketField.Queue, `Очередь: ${entry?.ticketQueue}`, 'Очередь',
+                            store.queueStore.entries, entry?.ticketQueue ?? '', entry?.ticketQueueId)
                     }
                 </ListItemText>
             </ListItem>
@@ -258,30 +196,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
             <ListItem>
                 <ListItemText>
                     {
-                        request.updatedField !== UpdatedTicketField.Category
-                            ? <>
-                                Категория: {entry?.ticketCategory}
-                                <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Category)}>
-                                    <EditIcon />
-                                </IconButton>
-                            </>
-                            : <>
-                                <Autocomplete
-                                    disablePortal
-                                    options={store.categoryStore.categories}
-                                    defaultValue={{ id: entry?.ticketCategoryId ?? 0, name: entry?.ticketCategory ?? '', isDefault: false, isActive: false, isRoot: false, parentCategoryId: 0, parentCategory: '', dateCreated: new Date(), dateModified: new Date() }}
-                                    getOptionLabel={option => option.name}
-                                    onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    renderInput={(params) => <TextField {...params} label="Категория" />}
-                                />
-                                <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                    <SaveIcon />
-                                </IconButton>
-                                <IconButton component={Button} onClick={handleCancel}>
-                                    <CloseIcon />
-                                </IconButton>
-                            </>
+                        getEditableItem(UpdatedTicketField.Category, `Категория: ${entry?.ticketCategory}`, 'Категория',
+                            store.categoryStore.categories, entry?.ticketCategory ?? '', entry?.ticketCategoryId)
                     }
                 </ListItemText>
             </ListItem>
@@ -292,30 +208,8 @@ const EmployeesTicketDetailView: FC<IEmployeesTicketDetailViewProps> = (props) =
                     <ListItem>
                         <ListItemText>
                             {
-                                request.updatedField !== UpdatedTicketField.Resolution
-                                    ? <>
-                                        Причина закрытия: {entry?.ticketResolution}
-                                        <IconButton component={Button} onClick={() => handleEdit(UpdatedTicketField.Resolution)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                    </>
-                                    : <>
-                                        <Autocomplete
-                                            disablePortal
-                                            options={store.resolutionStore.entries}
-                                            defaultValue={{ id: entry?.ticketResolutionId ?? 0, name: entry?.ticketResolution ?? '', isActive: false, dateCreated: new Date(), dateModified: new Date() }}
-                                            getOptionLabel={option => option.name}
-                                            onChange={(event, value) => setRequest({ ...request, value: value?.id ?? 0 })}
-                                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                                            renderInput={(params) => <TextField {...params} label="Причина закрытия" />}
-                                        />
-                                        <IconButton component={Button} onClick={handleSave} disabled={request.value === 0}>
-                                            <SaveIcon />
-                                        </IconButton>
-                                        <IconButton component={Button} onClick={handleCancel}>
-                                            <CloseIcon />
-                                        </IconButton>
-                                    </>
+                                getEditableItem(UpdatedTicketField.Resolution, `Причина закрытия: ${entry?.ticketResolution}`, 'Причина закрытия',
+                                    store.resolutionStore.entries, entry?.ticketResolution ?? '', entry?.ticketResolutionId)
                             }
                         </ListItemText>
                     </ListItem>

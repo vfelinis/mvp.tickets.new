@@ -52,6 +52,16 @@ namespace mvp.tickets.domain.Models
         public string Host { get; set; }
     }
 
+    public interface IUserLoginByCodeCommandRequest : IBaseCommandRequest
+    {
+        string Code { get; set; }
+    }
+    public record UserLoginByCodeCommandRequest : BaseCommandRequest, IUserLoginByCodeCommandRequest
+    {
+        [Required]
+        public string Code { get; set; }
+    }
+
     public interface IUserCreateCommandRequest : IBaseCommandRequest
     {
         string Email { get; set; }
@@ -115,5 +125,11 @@ namespace mvp.tickets.domain.Models
         public string Code { get; set; }
     }
 
-    public record UserRegisterRequestData(string Email, int CompanyId);
+    public enum JWTType
+    {
+        Register = 0,
+        ResetPassword = 1,
+        Support = 2,
+    }
+    public record UserJWTData(string Email, int CompanyId, JWTType Type);
 }

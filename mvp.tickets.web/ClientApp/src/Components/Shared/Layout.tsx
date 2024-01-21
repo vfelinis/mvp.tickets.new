@@ -32,7 +32,6 @@ import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { hasPermission, Permissions } from '../../Enums/Permissions';
 import { CircularProgress, Menu, MenuItem } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 const drawerWidth = 240;
 
@@ -143,13 +142,7 @@ const Layout: FC<ILayoutProps> = (props) => {
         || store.inviteStore.isLoading
         || store.companyStore.isLoading;
 
-    return <ThemeProvider theme={createTheme({
-        palette: {
-            primary: {
-                main: store.companyStore.current.color,
-            },
-        },
-    })}>
+    return <>
         {isLoading && <Box sx={{
             position: 'absolute',
             display: 'flex',
@@ -178,7 +171,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                         <MenuIcon />
                     </IconButton>
                     {
-                        store.companyStore.current.logo &&
+                        store.companyStore.current?.logo &&
                         <Box
                             component="img"
                             sx={{
@@ -190,7 +183,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                         />
                     }
                     <Typography variant="h6" noWrap component="div">
-                        {store.companyStore.current.name}
+                        {store.companyStore.current?.name}
                     </Typography>
                 </Toolbar>
             </AppBar>
@@ -341,6 +334,12 @@ const Layout: FC<ILayoutProps> = (props) => {
                                 <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminResponseTemplates.getRoute()}>
                                     Шаблоны
                                 </MenuItem>
+                                {
+                                    store.companyStore.current?.isRoot !== true &&
+                                    <MenuItem onClick={handleAdminClose} component={Link} to="/support" target="_blank">
+                                        Техническая поддержка
+                                    </MenuItem>
+                                }
                             </Menu>
                         </List>
                     </>
@@ -374,7 +373,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                     </>
                 }
                 {
-                    store.userStore.currentUser != null && store.companyStore.current.isRoot &&
+                    store.companyStore.current?.isRoot === true && store.userStore.currentUser != null && hasPermission(store.userStore.currentUser.permissions, Permissions.Admin) &&
                     <>
                         <Divider />
                         <List>
@@ -474,7 +473,7 @@ const Layout: FC<ILayoutProps> = (props) => {
                 <Outlet />
             </Box>
         </Box>
-    </ThemeProvider>;
+    </>;
 };
 
 export default observer(Layout);

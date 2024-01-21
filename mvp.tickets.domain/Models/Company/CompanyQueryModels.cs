@@ -10,6 +10,7 @@ namespace mvp.tickets.domain.Models
         bool IsActive { get; set; }
         bool IsRoot { get; set; }
         DateTimeOffset DateCreated { get; set; }
+        DateTimeOffset DateModified { get; set; }
         string Logo { get; set; }
         string Color { get; set; }
     }

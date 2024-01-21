@@ -10,7 +10,7 @@ namespace mvp.tickets.domain.Helpers
     {
         private static string Secret = "MEgCQQC4u3aB2VLtTEgG0gBE6ptHr3lRfmxxXR4Eruec+WIdMkZZk4so7ruIaGbZUfi5BhyLMbI3EUe7nvCJL+ulOAPRAgMBAAE=";
 
-        public static string GenerateToken(UserRegisterRequestData userData, int expirationMinutes)
+        public static string GenerateToken(UserJWTData userData, int expirationMinutes)
         {
             byte[] key = Convert.FromBase64String(Secret);
             SymmetricSecurityKey securityKey = new SymmetricSecurityKey(key);
@@ -62,7 +62,7 @@ namespace mvp.tickets.domain.Helpers
             }
         }
 
-        public static UserRegisterRequestData ValidateToken(string token)
+        public static UserJWTData ValidateToken(string token)
         {
             var identity = GetTokenData(token);
             if (identity == null)
@@ -70,10 +70,10 @@ namespace mvp.tickets.domain.Helpers
 
             Claim UserDataClaim = identity.FindFirst(ClaimTypes.UserData);
 
-            UserRegisterRequestData userData;
+            UserJWTData userData;
             try
             {
-                userData = JsonConvert.DeserializeObject<UserRegisterRequestData>(UserDataClaim.Value);
+                userData = JsonConvert.DeserializeObject<UserJWTData>(UserDataClaim.Value);
             }
             catch
             {

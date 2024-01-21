@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseReportQueryRequest, IBaseReportQueryResponse, IBaseCommandResponse, IBaseQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { IUserAssigneeModel, IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
+import { IUserAssigneeModel, IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginByCodeCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
 import { browserHistory } from '..';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 
@@ -35,6 +35,7 @@ export class UserStore {
             total: observable,
             editableUser: observable,
             login: action,
+            loginByCode: action,
             logout: action,
             setCurrentUser: action,
             setReport: action,
@@ -160,6 +161,24 @@ export class UserStore {
     login(request: IUserLoginCommandRequest): void {
         this.setIsLoading(true);
         axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    this.setCurrentUser(response.data.data);
+
+                } else {
+                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.errorStore.setError(JSON.stringify(error));
+            })
+    }
+
+    loginByCode(request: IUserLoginByCodeCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.loginByCode, request)
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {

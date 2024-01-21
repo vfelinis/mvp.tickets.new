@@ -90,17 +90,17 @@ WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
                             if (string.Equals(search.Key, nameof(Ticket.Name), StringComparison.OrdinalIgnoreCase))
                             {
                                 parameter.Add("@searchByName", search.Value, DbType.String);
-                                query += $@" AND t.""{nameof(Ticket.Name)}"" = @searchByName";
+                                query += $@" AND t.""{nameof(Ticket.Name)}"" LIKE CONCAT('%', @searchByName, '%')";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.ReporterEmail), StringComparison.OrdinalIgnoreCase))
                             {
                                 parameter.Add("@searchByReporter", search.Value, DbType.String);
-                                query += $@" AND t.""{nameof(Ticket.ReporterEmail)}"" = @searchByReporter";
+                                query += $@" AND t.""{nameof(Ticket.ReporterEmail)}"" LIKE CONCAT('%', @searchByReporter, '%')";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.AssigneeEmail), StringComparison.OrdinalIgnoreCase))
                             {
                                 parameter.Add("@searchByAssignee", search.Value, DbType.String);
-                                query += $@" AND t.""{nameof(Ticket.AssigneeEmail)}"" = @searchByAssignee";
+                                query += $@" AND t.""{nameof(Ticket.AssigneeEmail)}"" LIKE CONCAT('%', @searchByAssignee, '%')";
                             }
                             if (string.Equals(search.Key, nameof(Ticket.TicketPriorityId), StringComparison.OrdinalIgnoreCase))
                             {
@@ -130,7 +130,7 @@ WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
                             if (string.Equals(search.Key, nameof(Ticket.Source), StringComparison.OrdinalIgnoreCase))
                             {
                                 parameter.Add("@searchBySource", (int)Enum.Parse<TicketSource>(search.Value), DbType.Int32);
-                                query += $@" AND t.""{nameof(Ticket.Source)}"" = @searchByTicketCategoryId";
+                                query += $@" AND t.""{nameof(Ticket.Source)}"" = @searchBySource";
                             }
                         }
                     }

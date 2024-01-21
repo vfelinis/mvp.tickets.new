@@ -12,23 +12,14 @@ export class CompanyStore {
     isLoading: boolean;
     report: ICompanyModel[];
     company: ICompanyModel | null;
-    current: ICompanyModel;
+    current: ICompanyModel | null;
 
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
         this.isLoading = false;
         this.report = [];
         this.company = null;
-        this.current = {
-            id: 0,
-            name: '',
-            host: '',
-            isActive: true,
-            isRoot: false,
-            dateCreated: new Date(),
-            logo: null,
-            color : '#1976d2'
-        };
+        this.current = null;
         makeObservable(this, {
             isLoading: observable,
             report: observable,
@@ -57,7 +48,7 @@ export class CompanyStore {
         this.company = entry;
     }
 
-    setCurrent(entry: ICompanyModel) : void {
+    setCurrent(entry: ICompanyModel | null) : void {
         this.current = entry;
     }
 
@@ -141,6 +132,7 @@ export class CompanyStore {
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
+                    document.title = response.data.data.name;
                     this.setCurrent(response.data.data);
                     browserHistory.push(UIRoutesHelper.home.getRoute());
                 } else {
