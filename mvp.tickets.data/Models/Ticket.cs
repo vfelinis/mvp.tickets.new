@@ -6,6 +6,7 @@ namespace mvp.tickets.data.Models
     public class Ticket
     {
         public int Id { get; set; }
+        public Guid UniqueId { get; set; }
         public string Name { get; set; }
         public string Token { get; set; }
         public TicketSource Source { get; set; }
@@ -112,6 +113,10 @@ namespace mvp.tickets.data.Models
                 .WithMany(p => p.Tickets)
                 .HasForeignKey(c => c.TicketCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Ticket>()
+                .HasIndex(s => s.UniqueId)
+                .IsUnique(true);
 
             modelBuilder.Entity<Ticket>().ToTable(TableName);
         }

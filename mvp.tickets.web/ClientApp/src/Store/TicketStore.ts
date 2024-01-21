@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseCommandResponse, IBaseQueryResponse, IBaseReportQueryRequest, IBaseReportQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { ITicketCreateCommandRequest, ITicketModel, ITicketQueryRequest, ITicketUpdateCommandRequest, UpdatedTicketField } from '../Models/Ticket';
+import { ITicketModel, ITicketQueryRequest, ITicketUpdateCommandRequest } from '../Models/Ticket';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 import { browserHistory } from '..';
 
@@ -59,12 +59,12 @@ export class TicketStore {
                     this.setReport(response.data.data, response.data.total);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -81,12 +81,12 @@ export class TicketStore {
                     this.setEntry(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -96,14 +96,15 @@ export class TicketStore {
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
+                    this.rootStore.infoStore.setMessage('Заявка будет создана в ближайшее время.');
                     browserHistory.push(UIRoutesHelper.tickets.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -121,12 +122,12 @@ export class TicketStore {
                         browserHistory.push(UIRoutesHelper.employee.getRoute());
                     }
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -136,6 +137,7 @@ export class TicketStore {
             .then(response => {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
+                    this.rootStore.infoStore.setMessage('Комментарий будет создан в ближайшее время.');
                     browserHistory.push(
                         isUserView
                             ? token
@@ -143,12 +145,12 @@ export class TicketStore {
                                 : UIRoutesHelper.ticketsDetail.getRoute(id)
                             : UIRoutesHelper.employeeTicketDetail.getRoute(id));
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -160,12 +162,12 @@ export class TicketStore {
                 if (response.data.isSuccess) {
                     this.setEntry(response.data.data);
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

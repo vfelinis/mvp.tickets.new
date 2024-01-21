@@ -57,12 +57,12 @@ export class ResolutionStore {
                     this.setEntries(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -74,12 +74,12 @@ export class ResolutionStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminResolutions.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -95,12 +95,12 @@ export class ResolutionStore {
                 if (response.data.isSuccess) {
                     this.setEntry(response.data.data[0]);
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -112,12 +112,12 @@ export class ResolutionStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminResolutions.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

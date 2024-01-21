@@ -5,6 +5,7 @@ namespace mvp.tickets.data.Models
     public class TicketComment
     {
         public int Id { get; set; }
+        public Guid UniqueId { get; set; }
         public string Text { get; set; }
         public bool IsInternal { get; set; }
         public bool IsActive { get; set; }
@@ -42,6 +43,10 @@ namespace mvp.tickets.data.Models
                 .WithMany(p => p.TicketComments)
                 .HasForeignKey(c => c.CreatorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TicketComment>()
+                .HasIndex(s => s.UniqueId)
+                .IsUnique(true);
 
             modelBuilder.Entity<TicketComment>().ToTable(TableName);
         }

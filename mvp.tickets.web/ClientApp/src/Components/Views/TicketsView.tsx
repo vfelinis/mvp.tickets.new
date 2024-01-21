@@ -16,8 +16,9 @@ const TicketsView: FC<ITicketsViewProps> = (props) => {
 
     useEffect(() => {
         store.ticketStore.getReport({
-            searchBy: null,
-            sortBy: 'dateModified',
+            isUserView: true,
+            searchBy: {},
+            sortBy: 'id',
             sortDirection: SortDirection.DESC,
             offset: 0
         });
@@ -30,6 +31,7 @@ const TicketsView: FC<ITicketsViewProps> = (props) => {
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
       store.ticketStore.getReport({
+          isUserView: true,
           searchBy: searchBy,
           sortBy: sortBy,
           sortDirection: direction,

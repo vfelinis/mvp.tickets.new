@@ -118,16 +118,45 @@ app.Use(async (context, next) =>
     }
     await next.Invoke();
 });
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
+});
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.LogoFilesFolder)),
     RequestPath = $"/{AppConstants.LogoFilesFolder}",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
 });
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.TicketFilesFolder)),
     RequestPath = $"/{AppConstants.TicketFilesFolder}",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
 });
 if (app.Environment.IsDevelopment())
 {

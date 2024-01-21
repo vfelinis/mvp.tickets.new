@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Confluent.Kafka;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
@@ -7,6 +8,7 @@ using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
 using mvp.tickets.domain.Stores;
+using mvp.tickets.web.Kafka;
 using mvp.tickets.web.Services;
 
 namespace mvp.tickets.web.Extensions
@@ -43,14 +45,27 @@ namespace mvp.tickets.web.Extensions
             });
 
             services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, EmailBackgroundSearvice>();
+            services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, RequestTimeConsumer>();
             #endregion
 
             #region Data
             var connectionsStrings = new ConnectionStrings
             {
-                DefaultConnection = config.GetConnectionString("DefaultConnection")
+                DefaultConnection = config.GetConnectionString("DefaultConnection"),
+                RedisConnection = config.GetConnectionString("RedisConnection"),
+                KafkaConnection = config.GetConnectionString("KafkaConnection")
             };
             services.AddSingleton<IConnectionStrings>(connectionsStrings);
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = connectionsStrings.RedisConnection;
+                options.InstanceName = "RedisInstance";
+            });
+
+            services.AddSingleton<KafkaClientHandle>();
+            services.AddSingleton<KafkaDependentProducer<Null, string>>();
+
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(connectionsStrings.DefaultConnection));
             services.AddTransient<IUserStore, UserStore>();

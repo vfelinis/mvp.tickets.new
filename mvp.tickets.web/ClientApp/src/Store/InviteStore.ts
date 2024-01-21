@@ -53,12 +53,12 @@ export class InviteStore {
                     this.setReport(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -70,12 +70,12 @@ export class InviteStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.invites.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -87,12 +87,12 @@ export class InviteStore {
                 if (response.data.isSuccess) {
                     this.setReport(this.report.filter(s => s.id !== id));
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -104,12 +104,12 @@ export class InviteStore {
                 if (response.data.isSuccess) {
                     this.setIsValid(true);
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

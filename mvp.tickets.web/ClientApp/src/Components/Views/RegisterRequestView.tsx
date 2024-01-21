@@ -4,7 +4,6 @@ import { Link, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { ValidatorForm, TextValidator } from 'react-material-ui-form-validator';
 
-import Error from '../Shared/Error';
 import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { IUserRegisterRequestCommandRequest } from '../../Models/User';

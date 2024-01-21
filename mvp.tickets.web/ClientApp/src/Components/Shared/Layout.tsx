@@ -28,6 +28,7 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import Error from './Error';
+import Modal from './Modal';
 import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { hasPermission, Permissions } from '../../Enums/Permissions';
@@ -470,6 +471,7 @@ const Layout: FC<ILayoutProps> = (props) => {
             <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
                 <DrawerHeader />
                 <Error />
+                <Modal />
                 <Outlet />
             </Box>
         </Box>

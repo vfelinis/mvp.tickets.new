@@ -59,12 +59,12 @@ export class CategoryStore {
                     this.setCategories(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -81,12 +81,12 @@ export class CategoryStore {
                     this.setCategories(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -98,12 +98,12 @@ export class CategoryStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminCategories.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -121,12 +121,12 @@ export class CategoryStore {
                     this.getDataForCreateForm();
                 } else {
                     this.setIsLoading(false);
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -138,12 +138,12 @@ export class CategoryStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminCategories.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { CategoryStore } from './CategoryStore';
-import { ErrorStore } from './ErrorStore';
+import { InfoStore } from './InfoStore';
 import { PriorityStore } from './PriorityStore';
 import { QueueStore } from './QueueStore';
 import { ResolutionStore } from './ResolutionStore';
@@ -14,7 +14,7 @@ import { CompanyStore } from './CompanyStore';
 
 export class RootStore {
   userStore: UserStore;
-  errorStore: ErrorStore;
+  infoStore: InfoStore;
   categoryStore: CategoryStore;
   priorityStore: PriorityStore;
   queueStore: QueueStore;
@@ -28,7 +28,7 @@ export class RootStore {
 
   constructor() {
     this.userStore = new UserStore(this);
-    this.errorStore = new ErrorStore(this);
+    this.infoStore = new InfoStore(this);
     this.categoryStore = new CategoryStore(this);
     this.priorityStore = new PriorityStore(this);
     this.queueStore = new QueueStore(this);

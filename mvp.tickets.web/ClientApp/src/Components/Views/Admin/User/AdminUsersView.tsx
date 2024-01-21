@@ -17,15 +17,17 @@ const AdminUsersView: FC<IAdminUsersViewProps> = (props) => {
 
     useEffect(() => {
         store.userStore.getReport({
-            searchBy: null,
+            isUserView: false,
+            searchBy: {},
             sortBy: 'id',
-            sortDirection: SortDirection.ASC,
+            sortDirection: SortDirection.DESC,
             offset: 0
         });
     }, []);
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
         store.userStore.getReport({
+            isUserView: false,
             searchBy: searchBy,
             sortBy: sortBy,
             sortDirection: direction,

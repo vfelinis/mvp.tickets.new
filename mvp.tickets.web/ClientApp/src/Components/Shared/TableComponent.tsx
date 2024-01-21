@@ -81,7 +81,7 @@ interface ITable {
 }
 
 const TableComponent: FC<ITableComponentProps> = (props) => {
-    const [direction, setDirection] = useState(SortDirection.ASC);
+    const [direction, setDirection] = useState(SortDirection.DESC);
     const [searchBy, setSearchBy] = useState({});
     const [page, setPage] = useState(0);
     const [sortBy, setSortBy] = useState(props.table.columns[0].field);

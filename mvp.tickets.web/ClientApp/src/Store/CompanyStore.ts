@@ -61,12 +61,12 @@ export class CompanyStore {
                     this.setReport(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -78,12 +78,12 @@ export class CompanyStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(response.data.data);
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -99,12 +99,12 @@ export class CompanyStore {
                         this.setReport([...this.report]);
                     }
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -117,12 +117,12 @@ export class CompanyStore {
                     this.setCompany(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -136,12 +136,12 @@ export class CompanyStore {
                     this.setCurrent(response.data.data);
                     browserHistory.push(UIRoutesHelper.home.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

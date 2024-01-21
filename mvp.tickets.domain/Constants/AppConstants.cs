@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace mvp.tickets.domain.Constants
+﻿namespace mvp.tickets.domain.Constants
 {
     public static class AppConstants
     {
@@ -12,6 +6,7 @@ namespace mvp.tickets.domain.Constants
         public const string DebugHostCookie = "host";
 
         public const string TicketFilesFolder = "files/tickets";
+        public const string TicketFilesTempFolder = "files/tickets_temp";
         public const string LogoFilesFolder = "files/logos";
     }
 }

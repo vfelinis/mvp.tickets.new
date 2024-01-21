@@ -9,7 +9,7 @@ interface IErrorProps {
 const Error: FC<IErrorProps> = (props) => {
     const store = useRootStore();
     return <>
-        {store.errorStore.errors.map((s, i) => <Alert key={i} onClose={() => store.errorStore.clearErrors(i)} severity="error">{s}</Alert>)}
+        {store.infoStore.errors.map((s, i) => <Alert key={i} onClose={() => store.infoStore.clearErrors(i)} severity="error">{s}</Alert>)}
     </>;
 };
 

@@ -1,7 +1,9 @@
+using Confluent.Kafka;
 using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using mvp.tickets.data;
 using mvp.tickets.data.Models;
 using mvp.tickets.data.Procedures;
@@ -9,6 +11,8 @@ using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Models;
+using mvp.tickets.web.Helpers;
+using mvp.tickets.web.Kafka;
 using Npgsql;
 using System.Data;
 using System.Web;
@@ -24,25 +28,36 @@ namespace mvp.tickets.web.Controllers
         private readonly ILogger<TicketController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly ISettings _settings;
+        private readonly IDistributedCache _cache;
 
         public TicketController(ApplicationDbContext dbContext, IConnectionStrings connectionStrings, ILogger<TicketController> logger, IWebHostEnvironment environment,
-            ISettings settings)
+            ISettings settings, IDistributedCache cache)
         {
             _dbContext = dbContext;
             _connectionStrings = connectionStrings;
             _logger = logger;
             _environment = environment;
             _settings = settings;
+            _cache = cache;
         }
 
         [Authorize]
         [HttpPost("report")]
         public async Task<IBaseReportQueryResponse<IEnumerable<ITicketModel>>> Report(BaseReportQueryRequest request)
         {
+            if (request == null)
+            {
+                return new BaseReportQueryResponse<IEnumerable<ITicketModel>>
+                {
+                    IsSuccess = false,
+                    Code = ResponseCodes.BadRequest
+                };
+            }
             IBaseReportQueryResponse<IEnumerable<ITicketModel>> response = default;
             try
             {
-                if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !User.Claims.Any(s => s.Type == AuthConstants.UserClaim))
+                if ((!request.IsUserView && !User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
+                    || (request.IsUserView && !User.Claims.Any(s => s.Type == AuthConstants.UserClaim)))
                 {
                     return new BaseReportQueryResponse<IEnumerable<ITicketModel>>
                     {
@@ -52,6 +67,21 @@ namespace mvp.tickets.web.Controllers
                 }
 
                 var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                var options = System.Text.Json.JsonSerializer.Serialize(request);
+                var cacheData = await _cache.GetTicketsReport(_logger, companyId, request.IsUserView ? userId : null, options);
+                if (cacheData?.Data != null)
+                {
+                    return new BaseReportQueryResponse<IEnumerable<ITicketModel>>
+                    {
+                        IsSuccess = cacheData.Data.IsSuccess,
+                        Code = cacheData.Data.Code,
+                        ErrorMessage = cacheData.Data.ErrorMessage,
+                        Data = cacheData.Data.Data,
+                        Total = cacheData.Data.Total
+                    };
+                }
+
                 using (var connection = new NpgsqlConnection(_connectionStrings.DefaultConnection))
                 {
                     DynamicParameters parameter = new DynamicParameters();
@@ -67,9 +97,8 @@ SELECT
 FROM dbo.""{TicketExtension.TableName}"" t
 WHERE t.""{nameof(Ticket.CompanyId)}"" = @companyId
 ";
-                    if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
+                    if (request.IsUserView)
                     {
-                        var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
                         parameter.Add("@searchByReporterId", userId, DbType.Int32);
                         query += $@" AND t.""{nameof(Ticket.ReporterId)}"" = @searchByReporterId";
                     }
@@ -194,13 +223,14 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                     var result = await connection.QueryAsync<TicketReportModel>(query, param: parameter);
 
                     var entries = result.ToList();
-                    return new BaseReportQueryResponse<IEnumerable<ITicketModel>>
+                    response = new BaseReportQueryResponse<IEnumerable<ITicketModel>>
                     {
                         Data = entries,
                         Total = entries.FirstOrDefault()?.Total ?? 0,
                         IsSuccess = true,
                         Code = ResponseCodes.Success
                     };
+                    await _cache.SetTicketsReport(_logger, companyId, request.IsUserView ? userId : null, options, response);
                 }
             }
             catch (Exception ex)
@@ -356,6 +386,8 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                 }
                 
                 await _dbContext.SaveChangesAsync();
+                _cache.ClearTicketsReport(_logger, companyId, userId);
+                _cache.ClearTicketsReport(_logger, companyId, null);
 
                 return new BaseCommandResponse<bool>
                 {
@@ -376,62 +408,42 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
 
         [Authorize(Policy = AuthConstants.UserPolicy)]
         [HttpPost]
-        public async Task<IBaseCommandResponse<int>> Create([FromForm] TicketCreateCommandRequest request)
+        public async Task<IBaseCommandResponse<bool>> Create([FromForm] TicketCreateCommandRequest request, [FromServices] KafkaDependentProducer<Null, string> producer)
         {
             if (request == null)
             {
-                return new BaseCommandResponse<int>
+                return new BaseCommandResponse<bool>
                 {
                     IsSuccess = false,
                     Code = ResponseCodes.BadRequest
                 };
             }
 
-            IBaseCommandResponse<int> response = default;
+            IBaseCommandResponse<bool> response = default;
 
             try
             {
                 var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
-                var defaultQueue = await _dbContext.TicketQueues.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault && s.CompanyId == companyId);
-                if (defaultQueue == null)
-                {
-                    return new BaseCommandResponse<int>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.BadRequest,
-                        ErrorMessage = "¬ системе отсутствует первична€ очередь за€вок."
-                    };
-                }
-
-                var defaultStatus = await _dbContext.TicketStatuses.AsNoTracking().FirstOrDefaultAsync(s => s.IsDefault && s.CompanyId == companyId);
-                if (defaultStatus == null)
-                {
-                    return new BaseCommandResponse<int>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.BadRequest,
-                        ErrorMessage = "¬ системе отсутствует первичный статус за€вок."
-                    };
-                }
-
                 var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                var user = System.Text.Json.JsonSerializer.Deserialize<UserModel>(User.Claims.First(s => s.Type == AuthConstants.UserDataClaim).Value);
                 var entry = new Ticket
                 {
+                    UniqueId = Guid.NewGuid(),
                     CompanyId = companyId,
                     Name = HttpUtility.HtmlAttributeEncode(request.Name),
                     IsClosed = false,
                     DateCreated = DateTimeOffset.UtcNow,
                     DateModified = DateTimeOffset.UtcNow,
                     ReporterId = userId,
-                    ReporterEmail = User.Identity.Name.ToLower(),
-                    TicketQueueId = defaultQueue.Id,
-                    TicketStatusId = defaultStatus.Id,
+                    ReporterEmail = user.Email,
+                    TicketQueueId = 0,
+                    TicketStatusId = 0,
                     TicketCategoryId = request.TicketCategoryId,
                     TicketObservations = new List<TicketObservation>
                     {
                         new TicketObservation
                         {
-                            DateCreated = DateTimeOffset.Now,
+                            DateCreated = DateTimeOffset.UtcNow,
                             UserId = userId
                         }
                     }
@@ -440,7 +452,7 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                 {
                     var ticketComment = new TicketComment
                     {
-                        Ticket = entry,
+                        UniqueId = Guid.NewGuid(),
                         Text = HttpUtility.HtmlAttributeEncode(request.Text),
                         IsInternal = false,
                         IsActive = true,
@@ -457,7 +469,6 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             var ext = Path.GetExtension(file.FileName).Trim('.').ToLower();
                             var ticketCommentAttachment = new TicketCommentAttachment
                             {
-                                TicketComment = ticketComment,
                                 DateCreated = DateTimeOffset.UtcNow,
                                 DateModified = DateTimeOffset.UtcNow,
                                 IsActive = true,
@@ -467,7 +478,7 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {
@@ -477,19 +488,26 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                     }
                 }
 
-                await _dbContext.Tickets.AddAsync(entry).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-                response = new BaseCommandResponse<int>
+                var message = System.Text.Json.JsonSerializer.Serialize(new KafkaModels.Message
+                {
+                    CompanyId = companyId,
+                    UserId = userId,
+                    Type = KafkaModels.MessageType.NewTicket,
+                    Ticket = entry
+                });
+                await producer.ProduceAsync(KafkaModels._ticketsTopic, new Message<Null, string> { Value = message });
+
+                response = new BaseCommandResponse<bool>
                 {
                     IsSuccess = true,
                     Code = ResponseCodes.Success,
-                    Data = entry.Id
+                    Data = true
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                response = new BaseCommandResponse<int>();
+                response = new BaseCommandResponse<bool>();
                 response.HandleException(ex);
             }
             return response;
@@ -573,6 +591,8 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                 entry.DateModified = DateTimeOffset.UtcNow;
 
                 await _dbContext.SaveChangesAsync();
+                _cache.ClearTicketsReport(_logger, companyId, null);
+                _cache.ClearTicketsReport(_logger, companyId, entry.ReporterId);
 
                 var result = await Get(entry.Id, new TicketQueryRequest { IsUserView = false });
 
@@ -594,8 +614,10 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
             return response;
         }
 
+        [Authorize]
         [HttpPost("{id}/comments")]
-        public async Task<IBaseCommandResponse<int>> CreateComment(int id, [FromQuery] string token, [FromForm] TicketCommentCreateCommandRequest request)
+        public async Task<IBaseCommandResponse<int>> CreateComment(int id, [FromForm] TicketCommentCreateCommandRequest request,
+            [FromServices] KafkaDependentProducer<Null, string> producer)
         {
             if (request == null)
             {
@@ -610,7 +632,7 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
 
             try
             {
-                if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !User.Claims.Any(s => s.Type == AuthConstants.UserClaim) && string.IsNullOrWhiteSpace(token))
+                if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) && !User.Claims.Any(s => s.Type == AuthConstants.UserClaim))
                 {
                     return new BaseCommandResponse<int>
                     {
@@ -620,43 +642,13 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                 }
 
                 var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
-                var ticket = await _dbContext.Tickets.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id && s.CompanyId == companyId);
-                if (ticket == null)
-                {
-                    return new BaseCommandResponse<int>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.NotFound
-                    };
-                }
-
-                int userId = ticket.ReporterId;
-                if (User.Identity.IsAuthenticated)
-                {
-                    userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
-                    if (!User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) || ticket.ReporterId != userId)
-                    {
-                        return new BaseCommandResponse<int>
-                        {
-                            IsSuccess = false,
-                            Code = ResponseCodes.BadRequest
-                        };
-                    }
-                }
-                else if (string.IsNullOrWhiteSpace(token) || ticket.Token != token)
-                {
-                    return new BaseCommandResponse<int>
-                    {
-                        IsSuccess = false,
-                        Code = ResponseCodes.BadRequest
-                    };
-                }
-                
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
                 if (!string.IsNullOrWhiteSpace(request.Text) || request.Files?.Any() == true)
                 {
                     var ticketComment = new TicketComment
                     {
-                        TicketId = ticket.Id,
+                        UniqueId = Guid.NewGuid(),
+                        TicketId = id,
                         Text = !string.IsNullOrWhiteSpace(request.Text) ? HttpUtility.HtmlAttributeEncode(request.Text) : null,
                         IsInternal = request.IsInternal,
                         IsActive = true,
@@ -672,7 +664,6 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             var ext = Path.GetExtension(file.FileName).Trim('.').ToLower();
                             var ticketCommentAttachment = new TicketCommentAttachment
                             {
-                                TicketComment = ticketComment,
                                 DateCreated = DateTimeOffset.UtcNow,
                                 DateModified = DateTimeOffset.UtcNow,
                                 IsActive = true,
@@ -682,7 +673,7 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{ticket.ReporterId}/{ticketCommentAttachment.FileName}.{ext}");
+                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesTempFolder}/{companyId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}");
                             Directory.CreateDirectory(Path.GetDirectoryName(path));
                             using (var stream = System.IO.File.Create(path))
                             {
@@ -690,8 +681,16 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             }
                         }
                     }
-                    await _dbContext.TicketComments.AddAsync(ticketComment).ConfigureAwait(false);
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+                    var message = System.Text.Json.JsonSerializer.Serialize(new KafkaModels.Message
+                    {
+                        CompanyId = companyId,
+                        UserId = userId,
+                        Type = User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim) ? KafkaModels.MessageType.NewCommentFromEmployee : KafkaModels.MessageType.NewCommentFromUser,
+                        Comment = ticketComment
+                    });
+                    await producer.ProduceAsync(KafkaModels._ticketsTopic, new Message<Null, string> { Value = message });
+
                     response = new BaseCommandResponse<int>
                     {
                         IsSuccess = true,
