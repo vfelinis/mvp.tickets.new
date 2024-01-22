@@ -7,6 +7,7 @@ import { ValidatorForm, TextValidator } from 'react-material-ui-form-validator';
 import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { IUserLoginCommandRequest } from '../../Models/User';
+import { AuthTypes } from '../../Models/Company';
 
 interface ILoginViewProps {
 }
@@ -64,7 +65,10 @@ const LoginView: FC<ILoginViewProps> = (props) => {
       />
       <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }} >
         <Button type="submit">Войти</Button>
-        <Button component={Link} to={UIRoutesHelper.registerRequest.getRoute()}>Регистрация</Button>
+        {
+          store.companyStore.current?.authType == AuthTypes.Standard &&
+            <Button component={Link} to={UIRoutesHelper.registerRequest.getRoute()}>Регистрация</Button>
+        }
         <Button component={Link} to={UIRoutesHelper.forgotPassword.getRoute()}>Забыли пароль?</Button>
       </Box>
     </Box>

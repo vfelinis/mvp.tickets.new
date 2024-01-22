@@ -27,6 +27,8 @@ namespace mvp.tickets.data.Helpers
                     {
                         context.Companies.Add(new Company
                         {
+                            Color = "#1976d2",
+                            AuthType = domain.Enums.AuthTypes.Standard,
                             IsActive = true,
                             IsRoot = true,
                             Host = $"tickets.{AppConstants.DefaultHost}",

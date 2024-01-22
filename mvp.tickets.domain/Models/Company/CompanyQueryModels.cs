@@ -13,6 +13,7 @@ namespace mvp.tickets.domain.Models
         DateTimeOffset DateModified { get; set; }
         string Logo { get; set; }
         string Color { get; set; }
+        AuthTypes AuthType { get; set; }
     }
 
     public record CompanyModel : ICompanyModel
@@ -26,5 +27,6 @@ namespace mvp.tickets.domain.Models
         public DateTimeOffset DateModified { get; set; }
         public string Logo { get; set; }
         public string Color { get; set; }
+        public AuthTypes AuthType { get; set; }
     }
 }

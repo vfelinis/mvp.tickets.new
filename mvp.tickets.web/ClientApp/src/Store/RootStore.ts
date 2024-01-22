@@ -11,6 +11,7 @@ import { TicketStore } from './TicketStore';
 import { UserStore } from './UserStore';
 import { InviteStore } from './InviteStore';
 import { CompanyStore } from './CompanyStore';
+import { ICompanyModel } from '../Models/Company';
 
 export class RootStore {
   userStore: UserStore;

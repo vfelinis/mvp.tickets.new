@@ -7,6 +7,7 @@ export interface ICompanyModel {
     dateCreated: Date,
     logo: string | null,
     color: string,
+    authType: AuthTypes
 }
 
 export interface ICompanyCreateCommandRequest
@@ -17,6 +18,7 @@ export interface ICompanyCreateCommandRequest
     password: string,
     code: string,
     color: string,
+    authType: AuthTypes | null
 }
 
 export interface ICompanySetActiveCommandRequest
@@ -31,6 +33,13 @@ export interface ICompanyUpdateCommandRequest
     name: string,
     host: string,
     color: string,
+    logo: string | null,
     removeLogo: boolean,
-    logo: string | null
+    authType: AuthTypes | null
+}
+
+export enum AuthTypes
+{
+    Standard = 1,
+    WithoutRegister = 2
 }

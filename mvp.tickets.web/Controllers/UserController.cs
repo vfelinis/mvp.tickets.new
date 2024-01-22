@@ -104,6 +104,17 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
+                if (company.AuthType == AuthTypes.WithoutRegister)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Регистрация отключена."
+                    };
+                }
+
                 var email = request.Email.ToLower();
                 var existingUser = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == company.Id);
                 if (existingUser != null)
@@ -182,6 +193,17 @@ namespace mvp.tickets.web.Controllers
                         Code = domain.Enums.ResponseCodes.NotFound,
                         Data = false,
                         ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                if (company.AuthType == AuthTypes.WithoutRegister)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Регистрация отключена."
                     };
                 }
 

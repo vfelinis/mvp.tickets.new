@@ -1,10 +1,10 @@
-import { Box, Button, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, TextField, Typography } from '@mui/material';
 import { FC, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { ValidatorForm, TextValidator } from 'react-material-ui-form-validator';
 import { useRootStore } from '../../Store/RootStore';
-import { ICompanyCreateCommandRequest } from '../../Models/Company';
+import { AuthTypes, ICompanyCreateCommandRequest } from '../../Models/Company';
 import FileUpload from 'react-material-file-upload';
 import { MuiColorInput } from 'mui-color-input'
 
@@ -23,7 +23,8 @@ const CompaniesCreateView: FC<ICompaniesCreateViewProps> = (props) => {
         email: email ?? '',
         password: '',
         code: code ?? '',
-        color: '#1976d2'
+        color: '#1976d2',
+        authType: null
     });
 
     useEffect(() => {
@@ -45,6 +46,7 @@ const CompaniesCreateView: FC<ICompaniesCreateViewProps> = (props) => {
         formData.append("email", request.email);
         formData.append("password", request.password);
         formData.append("code", request.code);
+        formData.append("authType", request.authType!.toString());
         formData.append("color", request.color);
         store.companyStore.create(formData);
     }
@@ -92,6 +94,21 @@ const CompaniesCreateView: FC<ICompaniesCreateViewProps> = (props) => {
                 value={request.password}
                 validators={['required', 'maxStringLength:50']}
                 errorMessages={['Обязательное поле', 'Максимальная длина 50']}
+            />
+            <Autocomplete
+                disablePortal
+                options={[{id:AuthTypes.Standard,name:'С регистрацией'}, {id:AuthTypes.WithoutRegister,name:'Без регистрации'}]}
+                getOptionLabel={option => option.name}
+                onChange={(event, value) => setRequest({ ...request, authType: value?.id ?? null })}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextValidator
+                    {...params}
+                    value={params.inputProps.value}
+                    label="Тип аутентификации"
+                    name="authTypeId"
+                    validators={['required']}
+                    errorMessages={['Обязательное поле']}
+                />}
             />
             <MuiColorInput format={'hex'} value={request.color} onChange={(value) => setRequest({ ...request, color: value })} />
             <FileUpload

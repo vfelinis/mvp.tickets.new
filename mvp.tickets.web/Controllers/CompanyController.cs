@@ -85,6 +85,10 @@ namespace mvp.tickets.web.Controllers
                     Host = s.Host,
                     IsActive = s.IsActive,
                     DateCreated = s.DateCreated,
+                    DateModified = s.DateModified,
+                    Color = s.Color,
+                    IsRoot = s.IsRoot,
+                    AuthType = s.AuthType
                 }).ToListAsync();
 
                 response = new BaseQueryResponse<IEnumerable<ICompanyModel>>
@@ -139,6 +143,7 @@ namespace mvp.tickets.web.Controllers
                     IsRoot = false,
                     IsActive = true,
                     Color = request.Color,
+                    AuthType = request.AuthType,
                     DateCreated = DateTimeOffset.UtcNow,
                     DateModified = DateTimeOffset.UtcNow,
                     Users = new List<User>
@@ -230,6 +235,7 @@ namespace mvp.tickets.web.Controllers
                 }
 
                 entry.IsActive = request.IsActive;
+                entry.DateModified = DateTimeOffset.UtcNow;
                 await _dbContext.SaveChangesAsync();
 
                 response = new BaseCommandResponse<bool>
@@ -286,6 +292,9 @@ namespace mvp.tickets.web.Controllers
                         DateCreated = entry.DateCreated,
                         Logo = entry.Logo != null ? $"/{AppConstants.LogoFilesFolder}/{entry.Logo}?v={entry.DateModified.Ticks}" : null,
                         Color = entry.Color,
+                        AuthType = entry.AuthType,
+                        DateModified = entry.DateModified,
+                        IsRoot = entry.IsRoot
                     }
                 };
             }
@@ -337,6 +346,7 @@ namespace mvp.tickets.web.Controllers
                 entry.Name = request.Name;
                 entry.Host = $"{request.Host.ToLower()}.{AppConstants.DefaultHost}";
                 entry.Color = request.Color;
+                entry.AuthType = request.AuthType;
 
                 if (request.NewLogo != null)
                 {
@@ -370,7 +380,8 @@ namespace mvp.tickets.web.Controllers
                         DateModified = entry.DateModified,
                         IsActive = entry.IsActive,
                         IsRoot = entry.IsRoot,
-                        Logo = !string.IsNullOrWhiteSpace(entry.Logo) ? $"/{AppConstants.LogoFilesFolder}/{entry.Logo}?v={entry.DateModified.Ticks}" : null
+                        Logo = !string.IsNullOrWhiteSpace(entry.Logo) ? $"/{AppConstants.LogoFilesFolder}/{entry.Logo}?v={entry.DateModified.Ticks}" : null,
+                        AuthType = entry.AuthType,
                     }
                 };
             }

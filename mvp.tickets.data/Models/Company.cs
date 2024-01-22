@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using mvp.tickets.domain.Enums;
 
 namespace mvp.tickets.data.Models
 {
@@ -10,6 +11,7 @@ namespace mvp.tickets.data.Models
         public string Host { get; set; }
         public string Logo { get; set; }
         public string Color { get; set; }
+        public AuthTypes AuthType { get; set; }
         public bool IsActive { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
@@ -36,6 +38,7 @@ namespace mvp.tickets.data.Models
                 s.Property(p => p.Host).IsRequired(true).HasMaxLength(250);
                 s.Property(p => p.Logo).IsRequired(false).HasMaxLength(50);
                 s.Property(p => p.Color).IsRequired(true).HasMaxLength(50).HasDefaultValue("#1976d2");
+                s.Property(p => p.AuthType).IsRequired(true).HasDefaultValue(AuthTypes.Standard);
             });
 
             modelBuilder.Entity<Company>()

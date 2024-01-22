@@ -28,9 +28,7 @@ namespace mvp.tickets.data
         public DbSet<TicketCategory> TicketCategories { get; set; }
         public DbSet<TicketCategoryHistory> TicketCategoryHistories { get; set; }
         public DbSet<User> Users { get; set; }
-        //public DbSet<ProcedureVersion> ProcedureVersions { get; set; }
         public DbSet<Invite> Invites { get; set; }
-        public DbSet<Models.File> Files { get; set; }
         public DbSet<Company> Companies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -55,9 +53,7 @@ namespace mvp.tickets.data
             modelBuilder.DescribeTicketCategory();
             modelBuilder.DescribeTicketCategoryHistory();
             modelBuilder.DescribeUser();
-            //modelBuilder.DescribeProcedureVersion();
             modelBuilder.DescribeInvite();
-            modelBuilder.DescribeFile();
             modelBuilder.DescribeCompany();
         }
 

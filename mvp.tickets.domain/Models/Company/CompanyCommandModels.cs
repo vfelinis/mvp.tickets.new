@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using mvp.tickets.domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace mvp.tickets.domain.Models
@@ -12,6 +13,7 @@ namespace mvp.tickets.domain.Models
         string Code { get; set; }
         IFormFile Logo { get; set; }
         string Color { get; set; }
+        AuthTypes AuthType { get; set; }
     }
     public record CompanyCreateCommandRequest : BaseCommandRequest, ICompanyCreateCommandRequest
     {
@@ -34,6 +36,8 @@ namespace mvp.tickets.domain.Models
         [Required]
         [StringLength(50)]
         public string Color { get; set; }
+        [Required]
+        public AuthTypes AuthType { get; set; }
     }
 
     public interface ICompanySetActiveCommandRequest : IBaseCommandRequest
@@ -56,6 +60,7 @@ namespace mvp.tickets.domain.Models
         IFormFile NewLogo { get; set; }
         bool RemoveLogo { get; set; }
         string Color { get; set; }
+        AuthTypes AuthType { get; set; }
     }
     public record CompanyUpdateCommandRequest : BaseCommandRequest, ICompanyUpdateCommandRequest
     {
@@ -72,5 +77,7 @@ namespace mvp.tickets.domain.Models
         [Required]
         [StringLength(50)]
         public string Color { get; set; }
+        [Required]
+        public AuthTypes AuthType { get; set; }
     }
 }

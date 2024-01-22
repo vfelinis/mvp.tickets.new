@@ -31,7 +31,8 @@ namespace mvp.tickets.data.Stores
                     DateCreated = s.DateCreated,
                     DateModified = s.DateModified,
                     Logo = s.Logo,
-                    Color = s.Color
+                    Color = s.Color,
+                    AuthType = s.AuthType
                 }).FirstOrDefaultAsync();
         }
     }

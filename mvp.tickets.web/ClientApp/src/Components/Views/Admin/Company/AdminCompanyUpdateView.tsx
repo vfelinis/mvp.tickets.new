@@ -1,4 +1,4 @@
-import { Box, Button, FormControlLabel, Switch, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, Switch, Typography } from '@mui/material';
 import { FC, useState, useEffect, useLayoutEffect } from 'react';
 import { Link, } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
@@ -8,7 +8,7 @@ import { useRootStore } from '../../../../Store/RootStore';
 import React from 'react';
 import FileUpload from 'react-material-file-upload';
 import { MuiColorInput } from 'mui-color-input'
-import { ICompanyUpdateCommandRequest } from '../../../../Models/Company';
+import { AuthTypes, ICompanyUpdateCommandRequest } from '../../../../Models/Company';
 
 interface IAdminCompanyUpdateViewProps {
 }
@@ -22,15 +22,18 @@ const AdminCompanyUpdateView: FC<IAdminCompanyUpdateViewProps> = (props) => {
         host: '',
         color: '#1976d2',
         removeLogo: false,
-        logo: null
+        logo: null,
+        authType: null
     });
 
     useEffect(() => {
-        store.companyStore.getDataForUpdateForm(store.userStore.currentUser!.companyId);
+        if (store.companyStore.current != null) {
+            store.companyStore.getDataForUpdateForm(store.companyStore.current.id);
+        }
         return () => {
             store.companyStore.setCompany(null);
         };
-    }, []);
+    }, [store.companyStore.current]);
 
     useLayoutEffect(() => {
         if (store.companyStore.company !== null) {
@@ -40,7 +43,8 @@ const AdminCompanyUpdateView: FC<IAdminCompanyUpdateViewProps> = (props) => {
                 host: store.companyStore.company.host,
                 color: store.companyStore.company.color,
                 removeLogo: false,
-                logo: store.companyStore.company.logo
+                logo: store.companyStore.company.logo,
+                authType: store.companyStore.company.authType
             });
         }
     }, [store.companyStore.company]);
@@ -54,6 +58,7 @@ const AdminCompanyUpdateView: FC<IAdminCompanyUpdateViewProps> = (props) => {
         formData.append("name", request.name);
         formData.append("host", request.host);
         formData.append("removeLogo", request.removeLogo.toString());
+        formData.append("authType", request.authType!.toString());
         formData.append("color", request.color);
         store.companyStore.update(request.id, formData);
     }
@@ -86,6 +91,26 @@ const AdminCompanyUpdateView: FC<IAdminCompanyUpdateViewProps> = (props) => {
                 value={request.host}
                 validators={['required', 'maxStringLength:50', 'matchRegexp:^[a-z0-9]+$']}
                 errorMessages={['Обязательное поле', 'Максимальная длина 50', 'Допустимы только цифры и латинские строчные буквы']}
+            />
+            <Autocomplete
+                disablePortal
+                value={
+                    request.authType
+                        ? {id:request.authType, name: request.authType === AuthTypes.Standard ? 'С регистрацией' : 'Без регистрации'}
+                        : null
+                }
+                options={[{id:AuthTypes.Standard,name:'С регистрацией'}, {id:AuthTypes.WithoutRegister,name:'Без регистрации'}]}
+                getOptionLabel={option => option.name}
+                onChange={(event, value) => setRequest({ ...request, authType: value?.id ?? null })}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextValidator
+                    {...params}
+                    value={params.inputProps.value}
+                    label="Тип аутентификации"
+                    name="authTypeId"
+                    validators={['required']}
+                    errorMessages={['Обязательное поле']}
+                />}
             />
             <MuiColorInput format={'hex'} value={request.color} onChange={(value) => setRequest({ ...request, color: value })} />
             {
