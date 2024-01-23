@@ -10,7 +10,7 @@ namespace mvp.tickets.web.Kafka
         {
             NewTicket = 1,
             NewCommentFromUser = 2,
-            NewCommentFromEmployee = 2
+            NewCommentFromEmployee = 3
         }
 
         public class Message
