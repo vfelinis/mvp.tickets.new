@@ -96,7 +96,7 @@ const CreateTicketView: FC<ICreateTicketViewProps> = (props) => {
                 renderInput={(params) => <TextValidator
                     {...params}
                     value={params.inputProps.value}
-                    label="Тип"
+                    label="Категория"
                     name="ticketCategoryId"
                     validators={['required']}
                     errorMessages={['Обязательное поле']}

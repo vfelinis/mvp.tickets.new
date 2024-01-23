@@ -7,6 +7,7 @@
         string Host { get; set; }
         string ApiKey { get; set; }
         string TelegramToken { get; set; }
+        string FilesPath { get; set; }
     }
     public record Settings: ISettings
     {
@@ -15,6 +16,7 @@
         public string Host { get; set; }
         public string ApiKey { get; set; }
         public string TelegramToken { get; set; }
+        public string FilesPath { get; set; }
     }
     public class GMailSettings
     {

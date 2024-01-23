@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using mvp.tickets.data.Models;
 
 namespace mvp.tickets.data
@@ -27,7 +28,8 @@ namespace mvp.tickets.data
         public DbSet<TicketCategory> TicketCategories { get; set; }
         public DbSet<TicketCategoryHistory> TicketCategoryHistories { get; set; }
         public DbSet<User> Users { get; set; }
-        public DbSet<ProcedureVersion> ProcedureVersions { get; set; }
+        public DbSet<Invite> Invites { get; set; }
+        public DbSet<Company> Companies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -51,7 +53,25 @@ namespace mvp.tickets.data
             modelBuilder.DescribeTicketCategory();
             modelBuilder.DescribeTicketCategoryHistory();
             modelBuilder.DescribeUser();
-            modelBuilder.DescribeProcedureVersion();
+            modelBuilder.DescribeInvite();
+            modelBuilder.DescribeCompany();
+        }
+
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder
+                .Properties<DateTimeOffset>()
+                .HaveConversion<DateTimeOffsetConverter>();
+        }
+    }
+
+    public class DateTimeOffsetConverter : ValueConverter<DateTimeOffset, DateTimeOffset>
+    {
+        public DateTimeOffsetConverter()
+            : base(
+                d => d.ToUniversalTime(),
+                d => d.ToUniversalTime())
+        {
         }
     }
 }

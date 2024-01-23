@@ -4,11 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
+using mvp.tickets.data.Models;
 using mvp.tickets.domain.Constants;
+using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
+using mvp.tickets.domain.Stores;
 using System.Security.Claims;
 
 namespace mvp.tickets.web.Controllers
@@ -21,22 +24,39 @@ namespace mvp.tickets.web.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly ISettings _settings;
         private readonly ILogger<UserController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public UserController(IUserService userService, ApplicationDbContext dbContext, ISettings settings, ILogger<UserController> logger)
+        public UserController(IUserService userService, ApplicationDbContext dbContext, ISettings settings, ILogger<UserController> logger, IWebHostEnvironment env)
         {
             _userService = userService;
             _dbContext = dbContext;
             _settings = settings;
             _logger = logger;
+            _env = env;
         }
 
-        [HttpPost("current")]
-        public async Task<IBaseQueryResponse<IUserModel>> Current()
+        [HttpGet("current")]
+        public IBaseQueryResponse<IUserModel> Current()
         {
             if (User.Identity.IsAuthenticated)
             {
-                var id = int.Parse(User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-                var response = await _userService.Query(new UserQueryRequest { Id = id });
+                BaseQueryResponse<IUserModel> response = default;
+                try
+                {
+                    var user = System.Text.Json.JsonSerializer.Deserialize<UserModel>(User.Claims.First(s => s.Type == AuthConstants.UserDataClaim).Value);
+                    response = new BaseQueryResponse<IUserModel>
+                    {
+                        IsSuccess = true,
+                        Code = domain.Enums.ResponseCodes.Success,
+                        Data = user
+                    };
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, ex.Message);
+                    response = new BaseQueryResponse<IUserModel>();
+                    response.HandleException(ex);
+                }
                 return response;
             }
             else
@@ -50,22 +70,352 @@ namespace mvp.tickets.web.Controllers
             }
         }
 
+        [HttpPost("registerRequest")]
+        public async Task<IBaseCommandResponse<bool>> RegisterRequest([FromBody] UserRegisterRequestCommandRequest request,
+            [FromServices] ICompanyStore companyStore, [FromServices] IEmailService emailService)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Email))
+            {
+                return new BaseCommandResponse<bool>
+                {
+                    IsSuccess = false,
+                    Code = domain.Enums.ResponseCodes.BadRequest,
+                    Data = false
+                };
+            }
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var company = await companyStore.GetByHost(host);
+                if (company == null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = false,
+                        ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                if (company.AuthType == AuthTypes.WithoutRegister)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Регистрация отключена."
+                    };
+                }
+
+                var email = request.Email.ToLower();
+                var existingUser = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == company.Id);
+                if (existingUser != null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Такой пользователь уже существует."
+                    };
+                }
+
+                var userData = new UserJWTData(email, company.Id, JWTType.Register);
+                var code = TokenHelper.GenerateToken(userData, 30);
+                await emailService.Send(email, $"{company.Name} - регистрация.",
+                    $"Для продолжения регистрации перейдите по следующей ссылке <a href='https://{host}/register/?email={email}&code={code}'>нажмите здесь</a>", true);
+
+                response = new BaseCommandResponse<bool>
+                {
+                    IsSuccess = true,
+                    Code = domain.Enums.ResponseCodes.Success,
+                    Data = true,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
+        [HttpPost("register")]
+        public async Task<IBaseCommandResponse<bool>> Register([FromBody] UserRegisterCommandRequest request,
+            [FromServices] ICompanyStore companyStore)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Code) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName)
+                || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return new BaseCommandResponse<bool>
+                {
+                    IsSuccess = false,
+                    Code = domain.Enums.ResponseCodes.BadRequest,
+                    Data = false
+                };
+            }
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                var userData = TokenHelper.ValidateToken(request.Code);
+                if (userData == null || userData.Type != JWTType.Register)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Код доступа не действителен."
+                    };
+                }
+
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var company = await companyStore.GetByHost(host);
+                if (company == null || company.Id != userData.CompanyId)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = false,
+                        ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                if (company.AuthType == AuthTypes.WithoutRegister)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Регистрация отключена."
+                    };
+                }
+
+                var email = userData.Email.ToLower();
+                var existingUser = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == company.Id);
+                if (existingUser != null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Такой пользователь уже существует."
+                    };
+                }
+
+                var user = new User
+                {
+                    CompanyId = company.Id,
+                    Email = email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    IsLocked = false,
+                    Password = HashHelper.GetSHA256Hash(request.Password),
+                    Permissions = domain.Enums.Permissions.User,
+                    Phone = null,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                };
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+                
+                response = new BaseCommandResponse<bool>
+                {
+                    IsSuccess = true,
+                    Code = domain.Enums.ResponseCodes.Success,
+                    Data = true,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
         [HttpPost("login")]
         public async Task<IBaseCommandResponse<IUserModel>> Login(UserLoginCommandRequest request)
         {
-            var response = await _userService.Login(request);
-            if (response.IsSuccess)
+            IBaseCommandResponse<IUserModel> response = default;
+            try
             {
-                var claimsIdentity = new ClaimsIdentity(response.Data.claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+                if (request != null)
+                {
+                    var host = Request.Host.Value.ToLower();
+                    if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                    {
+                        host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                    }
+                    request.Host = host;
+                }
+
+                var loginResponse = await _userService.Login(request);
+
+                if (loginResponse.IsSuccess)
+                {
+                    var claimsIdentity = new ClaimsIdentity(loginResponse.Data.claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+                }
+
+                response = new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = loginResponse.IsSuccess,
+                    Code = loginResponse.Code,
+                    ErrorMessage = loginResponse.ErrorMessage,
+                    Data = loginResponse.Data.user
+                };
             }
-            return new BaseCommandResponse<IUserModel>
+            catch (Exception ex)
             {
-                IsSuccess = response.IsSuccess,
-                Code = response.Code,
-                ErrorMessage = response.ErrorMessage,
-                Data = response.Data.user
-            };
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<IUserModel>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
+        [HttpPost("loginByCode")]
+        public async Task<IBaseCommandResponse<IUserModel>> LoginByCode(UserLoginByCodeCommandRequest request, [FromServices] ICompanyStore companyStore)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Code))
+            {
+                return new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = false,
+                    Code = ResponseCodes.BadRequest
+                };
+            }
+            IBaseCommandResponse<IUserModel> response = default;
+            try
+            {
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var userData = TokenHelper.ValidateToken(request.Code);
+                if (userData == null || userData.Type != JWTType.Support)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Код доступа не действителен."
+                    };
+                }
+                var rootCompany = await companyStore.GetByHost(host);
+                if (!rootCompany.IsRoot)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Текущий хост не является основным."
+                    };
+                }
+                var userCompany = await _dbContext.Companies.AsNoTracking().FirstOrDefaultAsync(s => s.Id == userData.CompanyId && s.IsActive);
+                if (userCompany == null)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Некорректное предприятие."
+                    };
+                }
+                var user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == userData.Email && !s.IsLocked);
+                if (user == null || !user.Permissions.HasFlag(Permissions.Admin))
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Некорректный пользователь."
+                    };
+                }
+
+                var email = $"{userCompany.Id}@company";
+                var rootUser = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == rootCompany.Id);
+                if (rootUser == null)
+                {
+                    rootUser = new User
+                    {
+                        CompanyId = rootCompany.Id,
+                        Email = email,
+                        IsLocked = false,
+                        Password = HashHelper.GetSHA256Hash(Guid.NewGuid().ToString()),
+                        DateCreated = DateTimeOffset.UtcNow,
+                        DateModified = DateTimeOffset.UtcNow,
+                        Phone = null,
+                        Permissions = Permissions.User,
+                        FirstName = "Предприятие",
+                        LastName = userCompany.Name,
+                    };
+                    _dbContext.Users.Add(rootUser);
+                    await _dbContext.SaveChangesAsync();
+                }
+                else if (rootUser.IsLocked)
+                {
+                    return new BaseCommandResponse<IUserModel>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = "Пользователь заблокирован."
+                    };
+                }
+
+                var userModel = new UserModel
+                {
+                    Id = rootUser.Id,
+                    CompanyId = rootUser.CompanyId,
+                    Email = rootUser.Email,
+                    IsLocked = rootUser.IsLocked,
+                    Permissions = rootUser.Permissions,
+                    FirstName = rootUser.FirstName,
+                    LastName = rootUser.LastName,
+                    DateCreated = rootUser.DateCreated,
+                    DateModified = rootUser.DateModified,
+                };
+
+                var claims = UserHelper.GetClaims(userModel, rootCompany.IsRoot);
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+
+                response = new BaseCommandResponse<IUserModel>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = userModel
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<IUserModel>();
+                response.HandleException(ex);
+            }
+            return response;
         }
 
         [HttpPost("logout")]
@@ -83,6 +433,10 @@ namespace mvp.tickets.web.Controllers
         [HttpPost("report")]
         public async Task<IBaseReportQueryResponse<IEnumerable<IUserModel>>> GetReport(BaseReportQueryRequest request)
         {
+            if (request != null)
+            {
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            }
             return await _userService.GetReport(request);
         }
 
@@ -90,11 +444,12 @@ namespace mvp.tickets.web.Controllers
         [HttpGet("{id}")]
         public async Task<IBaseQueryResponse<IUserModel>> Get(int id)
         {
+            var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
             IBaseQueryResponse<IUserModel> response = default;
             try
             {
                 var user = await _dbContext.Users
-                    .Where(s => s.Id == id)
+                    .Where(s => s.Id == id && s.CompanyId == companyId)
                     .Select(s => new UserModel
                     {
                         Id = id,
@@ -104,7 +459,8 @@ namespace mvp.tickets.web.Controllers
                         Permissions = s.Permissions,
                         IsLocked = s.IsLocked,
                         DateCreated = s.DateCreated,
-                        DateModified = s.DateModified
+                        DateModified = s.DateModified,
+                        CompanyId = companyId
                     }).FirstOrDefaultAsync();
 
                 response = user != null
@@ -147,8 +503,9 @@ namespace mvp.tickets.web.Controllers
             IBaseCommandResponse<int> response = default;
             try
             {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
                 var email = request.Email.ToLower();
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == companyId);
                 if (user != null)
                 {
                     return new BaseCommandResponse<int>
@@ -166,8 +523,10 @@ namespace mvp.tickets.web.Controllers
                     LastName = request.LastName,
                     Permissions = request.Permissions,
                     IsLocked = request.IsLocked,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                    CompanyId = companyId,
+                    Password = HashHelper.GetSHA256Hash(request.Password),
                 };
                 await _dbContext.Users.AddAsync(user);
                 await _dbContext.SaveChangesAsync();
@@ -177,23 +536,6 @@ namespace mvp.tickets.web.Controllers
                     Code = domain.Enums.ResponseCodes.Success,
                     Data = user.Id
                 };
-
-                try
-                {
-                    var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                    await firebaseAuth.CreateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-                    {
-                        Email = user.Email,
-                        DisplayName = $"{user.FirstName} {user.LastName}",
-                        Password = !string.IsNullOrWhiteSpace(request.Password)
-                            ? request.Password
-                            : Guid.NewGuid().ToString()
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, ex.Message);
-                }
             }
             catch (Exception ex)
             {
@@ -221,7 +563,8 @@ namespace mvp.tickets.web.Controllers
             IBaseCommandResponse<bool> response = default;
             try
             {
-                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Id == request.Id);
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var user = await _dbContext.Users.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == companyId);
                 if (user == null)
                 {
                     return new BaseCommandResponse<bool>
@@ -234,7 +577,7 @@ namespace mvp.tickets.web.Controllers
 
                 var email = request.Email.ToLower();
                 var oldEmail = user.Email;
-                if (oldEmail != email && await _dbContext.Users.AnyAsync(s => s.Email == email && s.Id != request.Id))
+                if (oldEmail != email && await _dbContext.Users.AnyAsync(s => s.Email == email && s.Id != request.Id && s.CompanyId == companyId))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -249,7 +592,11 @@ namespace mvp.tickets.web.Controllers
                 user.LastName = request.LastName;
                 user.Permissions = request.Permissions;
                 user.IsLocked = request.IsLocked;
-                user.DateModified = DateTimeOffset.Now;
+                user.DateModified = DateTimeOffset.UtcNow;
+                if (!string.IsNullOrWhiteSpace(request.Password))
+                {
+                    user.Password = HashHelper.GetSHA256Hash(request.Password);
+                }
 
                 await _dbContext.SaveChangesAsync();
 
@@ -259,35 +606,195 @@ namespace mvp.tickets.web.Controllers
                     Code = domain.Enums.ResponseCodes.Success,
                     Data = true
                 };
-
-                if (oldEmail != email || !string.IsNullOrWhiteSpace(request.Password))
-                {
-                    try
-                    {
-                        var firebaseAuth = FirebaseHelper.GetFirebaseAuth(_settings.FirebaseAdminConfig);
-                        var fbUser = await firebaseAuth.GetUserByEmailAsync(oldEmail);
-                        if (fbUser != null)
-                        {
-                            await firebaseAuth.UpdateUserAsync(new FirebaseAdmin.Auth.UserRecordArgs
-                            {
-                                Uid = fbUser.Uid,
-                                Email = email,
-                                Password = !string.IsNullOrWhiteSpace(request.Password)
-                                    ? request.Password
-                                    : null
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, ex.Message);
-                    }
-                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
                 response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+
+            return response;
+        }
+
+        [HttpPost("forgotPassword")]
+        public async Task<IBaseCommandResponse<bool>> ForgotPassword([FromBody] UserFortogPasswordCommandRequest request,
+            [FromServices] ICompanyStore companyStore, [FromServices] IEmailService emailService)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Email))
+            {
+                return new BaseCommandResponse<bool>
+                {
+                    IsSuccess = false,
+                    Code = domain.Enums.ResponseCodes.BadRequest,
+                    Data = false
+                };
+            }
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var company = await companyStore.GetByHost(host);
+                if (company == null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = false,
+                        ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                var email = request.Email.ToLower();
+                var existingUser = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == company.Id);
+                if (existingUser == null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = false,
+                        ErrorMessage = "Пользователь не найден."
+                    };
+                }
+
+                var userData = new UserJWTData(email, company.Id, JWTType.ResetPassword);
+                var code = TokenHelper.GenerateToken(userData, 30);
+                await emailService.Send(email, $"{company.Name} - сброс пароля.",
+                    $"Для сброса пароля перейдите по следующей ссылке <a href='https://{host}/resetPassword/?code={code}'>нажмите здесь</a>", true);
+
+                response = new BaseCommandResponse<bool>
+                {
+                    IsSuccess = true,
+                    Code = domain.Enums.ResponseCodes.Success,
+                    Data = true,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
+        [HttpPost("resetPassword")]
+        public async Task<IBaseCommandResponse<bool>> ResetPassword([FromBody] UserResetPasswordCommandRequest request,
+            [FromServices] ICompanyStore companyStore)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Code) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return new BaseCommandResponse<bool>
+                {
+                    IsSuccess = false,
+                    Code = domain.Enums.ResponseCodes.BadRequest,
+                    Data = false
+                };
+            }
+            IBaseCommandResponse<bool> response = default;
+            try
+            {
+                var userData = TokenHelper.ValidateToken(request.Code);
+                if (userData == null || userData.Type != JWTType.ResetPassword)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Код доступа не действителен."
+                    };
+                }
+
+                var host = Request.Host.Value.ToLower();
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                {
+                    host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
+                }
+
+                var company = await companyStore.GetByHost(host);
+                if (company == null || company.Id != userData.CompanyId)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.NotFound,
+                        Data = false,
+                        ErrorMessage = "Предприятие не найдено."
+                    };
+                }
+
+                var email = userData.Email.ToLower();
+                var existingUser = await _dbContext.Users.FirstOrDefaultAsync(s => s.Email == email && s.CompanyId == company.Id);
+                if (existingUser == null)
+                {
+                    return new BaseCommandResponse<bool>
+                    {
+                        IsSuccess = false,
+                        Code = domain.Enums.ResponseCodes.BadRequest,
+                        Data = false,
+                        ErrorMessage = "Пользователь не найден."
+                    };
+                }
+
+                existingUser.DateModified = DateTimeOffset.UtcNow;
+                existingUser.Password = HashHelper.GetSHA256Hash(request.Password);
+                await _dbContext.SaveChangesAsync();
+
+                response = new BaseCommandResponse<bool>
+                {
+                    IsSuccess = true,
+                    Code = domain.Enums.ResponseCodes.Success,
+                    Data = true,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseCommandResponse<bool>();
+                response.HandleException(ex);
+            }
+            return response;
+        }
+
+        [Authorize(Policy = AuthConstants.EmployeePolicy)]
+        [HttpGet("assignees")]
+        public async Task<IBaseQueryResponse<IEnumerable<IUserAssigneeModel>>> GetAssignees()
+        {
+            IBaseQueryResponse<IEnumerable<IUserAssigneeModel>> response = default;
+            try
+            {
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var query = _dbContext.Users.AsNoTracking().Where(s => s.CompanyId == companyId && !s.IsLocked
+                        && s.Permissions.HasFlag(Permissions.Employee))
+                    .Select(s => new UserAssigneeModel
+                    {
+                        Id = s.Id,
+                        Name = s.FirstName + " " + s.LastName + " (" + s.Email + ")",
+                    });
+
+                var str = query.ToQueryString();
+
+                var entries = await query.ToListAsync();
+                var userId = int.Parse(User.Claims.First(s => s.Type == System.Security.Claims.ClaimTypes.Sid).Value);
+                response = new BaseQueryResponse<IEnumerable<IUserAssigneeModel>>
+                {
+                    IsSuccess = true,
+                    Code = ResponseCodes.Success,
+                    Data = entries.OrderByDescending(s => s.Id == userId).ThenBy(s => s.Name).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                response = new BaseQueryResponse<IEnumerable<IUserAssigneeModel>>();
                 response.HandleException(ex);
             }
 

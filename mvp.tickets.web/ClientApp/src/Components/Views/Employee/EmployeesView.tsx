@@ -16,8 +16,9 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
 
     useEffect(() => {
         store.ticketStore.getReport({
-            searchBy: null,
-            sortBy: 'dateCreated',
+            isUserView: false,
+            searchBy: {},
+            sortBy: 'id',
             sortDirection: SortDirection.DESC,
             offset: 0
         });
@@ -25,10 +26,18 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
         store.priorityStore.getEntries(true);
         store.queueStore.getEntries(true);
         store.statusStore.getEntries(true);
+        return () => {
+            store.ticketStore.setReport([], 0);
+            store.categoryStore.setCategories([]);
+            store.priorityStore.setEntries([]);
+            store.queueStore.setEntries([]);
+            store.statusStore.setEntries([]);
+        };
     }, []);
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
       store.ticketStore.getReport({
+          isUserView: false,
           searchBy: searchBy,
           sortBy: sortBy,
           sortDirection: direction,
@@ -58,11 +67,11 @@ const EmployeesView: FC<IEmployeesViewProps> = (props) => {
                 editRoute: (row: ITicketModel): string => UIRoutesHelper.employeeTicketDetail.getRoute(row.id),
                 isServerSide: true,
                 actionHandle: actionHandle,
-                total: store.ticketStore.report.length,
+                total: store.ticketStore.total,
             },
             columns: [
                 { field: 'id', label: 'Id', type: ColumnType.Number, sortable: true, searchable: true },
-                { field: 'name', label: 'Название', type: ColumnType.String, sortable: false, searchable: false },
+                { field: 'name', label: 'Название', type: ColumnType.String, sortable: true, searchable: true },
                 { field: 'dateCreated', label: 'Создан', type: ColumnType.Date, sortable: true, searchable: false },
                 { field: 'dateModified', label: 'Обновлен', type: ColumnType.Date, sortable: true, searchable: false },
                 { field: 'source', label: 'Источник', type: ColumnType.String, sortable: false, searchable: true,

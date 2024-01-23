@@ -8,6 +8,6 @@ namespace mvp.tickets.domain.Constants
 {
     public static class TicketConstants
     {
-        public const string AttachmentFolder = "files/tickets";
+        
     }
 }

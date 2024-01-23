@@ -21,6 +21,9 @@ const TicketDetailView: FC<ITicketDetailViewProps> = (props) => {
     const [searchParams] = useSearchParams();
     useEffect(() => {
         store.ticketStore.getEntry(Number(id), true, searchParams.get('token'));
+        return () => {
+            store.ticketStore.setEntry(null);
+        };
     }, []);
 
     const entry = store.ticketStore.entry;
@@ -41,7 +44,7 @@ const TicketDetailView: FC<ITicketDetailViewProps> = (props) => {
             <Divider />
             <ListItem>
                 <ListItemText>
-                    Статус: {entry?.isClosed === true ? 'Закрыта' : 'Открыта'}
+                    Статус: {entry?.isClosed === true ? 'Закрыта' : 'Открыта'} {entry?.isClosed === false && <Button variant="contained" onClick={() => store.ticketStore.close(entry.id, true)}>Закрыть</Button> }
                 </ListItemText>
             </ListItem>
             <Divider />

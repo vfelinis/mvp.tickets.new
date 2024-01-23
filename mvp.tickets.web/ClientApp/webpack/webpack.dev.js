@@ -8,7 +8,7 @@ const target = env.ASPNETCORE_HTTPS_PORT
     ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`
     : env.ASPNETCORE_URLS
         ? env.ASPNETCORE_URLS.split(';')[0]
-        : 'https://localhost:44372'
+        : 'https://localhost:5101'
 
 module.exports = {
   mode: 'development',
@@ -23,6 +23,10 @@ module.exports = {
         secure: false,
       },
       '/files': {
+        target: 'https://localhost:5101',
+        secure: false,
+      },
+      '/support': {
         target: 'https://localhost:5101',
         secure: false,
       },

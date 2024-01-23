@@ -21,6 +21,10 @@ namespace mvp.tickets.web.Controllers
         [HttpGet]
         public async Task<IBaseQueryResponse<IEnumerable<ICategoryModel>>> Query([FromQuery] CategoryQueryRequest request)
         {
+            if (request != null)
+            {
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            }
             return await _service.Query(request);
         }
 
@@ -28,6 +32,10 @@ namespace mvp.tickets.web.Controllers
         [HttpPost]
         public async Task<IBaseCommandResponse<int>> Create([FromBody] CategoryCreateCommandRequest request)
         {
+            if (request != null)
+            {
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            }
             return await _service.Create(request);
         }
 
@@ -35,6 +43,10 @@ namespace mvp.tickets.web.Controllers
         [HttpPut]
         public async Task<IBaseCommandResponse<bool>> Update([FromBody] CategoryUpdateCommandRequest request)
         {
+            if (request != null)
+            {
+                request.CompanyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            }
             return await _service.Update(request);
         }
     }

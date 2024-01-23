@@ -9,6 +9,7 @@ export interface IBaseResponse {
 
 export interface IBaseReportQueryRequest
 {
+    isUserView: boolean
     searchBy: object | null
     sortBy: string
     sortDirection: SortDirection

@@ -170,12 +170,65 @@ export class UIRoutesHelper {
         getRoute: (id: number) => `/${this.employeeTicketCommentCreate.path.replace(":id", id.toString())}/`,
     };
 
+    static invites: IRoute = {
+        path: 'invites',
+        getRoute: () => `/${this.invites.path}/`,
+    };
+
+    static invitesCreate: IRoute = {
+        path: 'invites/create',
+        getRoute: () => `/${this.invitesCreate.path}/`,
+    };
+
+    static companies: IRoute = {
+        path: 'companies',
+        getRoute: () => `/${this.companies.path}/`,
+    };
+
+    static companiesCreate: IRoute = {
+        path: 'companies/create',
+        getRoute: () => `/${this.companiesCreate.path}/`,
+    };
+
+    static adminCompany: IRoute = {
+        path: 'admin/company',
+        getRoute: () => `/${this.adminCompany.path}/`,
+    };
+
+    static metrics: IRoute = {
+        path: 'metrics',
+        getRoute: () => `/${this.metrics.path}/`,
+    };
 
     static login: IRoute = {
         path: 'login',
         getRoute: () => `/${this.login.path}/`,
     };
 
+    static registerRequest: IRoute = {
+        path: 'registerRequest',
+        getRoute: () => `/${this.registerRequest.path}/`,
+    };
+
+    static emailConfirmation: IRoute = {
+        path: 'emailConfirmation',
+        getRoute: () => `/${this.emailConfirmation.path}/`,
+    };
+
+    static forgotPassword: IRoute = {
+        path: 'forgotPassword',
+        getRoute: () => `/${this.forgotPassword.path}/`,
+    };
+
+    static resetPassword: IRoute = {
+        path: 'resetPassword',
+        getRoute: () => `/${this.resetPassword.path}/`,
+    };
+
+    static register: IRoute = {
+        path: 'register',
+        getRoute: () => `/${this.register.path}/`,
+    };
     
     static notFound: IRoute = {
         path: '404',

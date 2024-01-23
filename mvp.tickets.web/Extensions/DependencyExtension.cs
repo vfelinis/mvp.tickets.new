@@ -1,6 +1,5 @@
-﻿using Google.Apis.Gmail.v1.Data;
+﻿using Confluent.Kafka;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
@@ -9,6 +8,7 @@ using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Models;
 using mvp.tickets.domain.Services;
 using mvp.tickets.domain.Stores;
+using mvp.tickets.web.Kafka;
 using mvp.tickets.web.Services;
 
 namespace mvp.tickets.web.Extensions
@@ -41,26 +41,42 @@ namespace mvp.tickets.web.Extensions
                 options.AddPolicy(AuthConstants.AdminPolicy, policy => policy.RequireClaim(AuthConstants.AdminClaim));
                 options.AddPolicy(AuthConstants.EmployeePolicy, policy => policy.RequireClaim(AuthConstants.EmployeeClaim));
                 options.AddPolicy(AuthConstants.UserPolicy, policy => policy.RequireClaim(AuthConstants.UserClaim));
+                options.AddPolicy(AuthConstants.RootSpacePolicy, policy => policy.RequireClaim(AuthConstants.RootSpaceClaim));
             });
 
             services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, EmailBackgroundSearvice>();
+            services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, RequestTimeConsumer>();
             #endregion
 
             #region Data
             var connectionsStrings = new ConnectionStrings
             {
-                DefaultConnection = config.GetConnectionString("DefaultConnection")
+                DefaultConnection = config.GetConnectionString("DefaultConnection"),
+                RedisConnection = config.GetConnectionString("RedisConnection"),
+                KafkaConnection = config.GetConnectionString("KafkaConnection")
             };
             services.AddSingleton<IConnectionStrings>(connectionsStrings);
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = connectionsStrings.RedisConnection;
+                options.InstanceName = "RedisInstance";
+            });
+
+            services.AddSingleton<KafkaClientHandle>();
+            services.AddSingleton<KafkaDependentProducer<Null, string>>();
+
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionsStrings.DefaultConnection));
+                options.UseNpgsql(connectionsStrings.DefaultConnection));
             services.AddTransient<IUserStore, UserStore>();
             services.AddTransient<ICategoryStore, CategoryStore>();
+            services.AddTransient<ICompanyStore, CompanyStore>();
             #endregion
 
             #region Domain
             services.AddTransient<IUserService, UserService>();
             services.AddTransient<ICategoryService, CategoryService>();
+            services.AddTransient<IEmailService, EmailService>();
             #endregion
 
 
@@ -71,6 +87,7 @@ namespace mvp.tickets.web.Extensions
                 Host = config.GetValue<string>("Host"),
                 ApiKey = config.GetValue<string>("ApiKey"),
                 TelegramToken = config.GetValue<string>("TelegramToken"),
+                FilesPath = config.GetValue<string>("FilesPath"),
             };
             services.AddSingleton<ISettings>(settings);
         }

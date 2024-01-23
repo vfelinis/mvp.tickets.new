@@ -11,6 +11,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public List<Ticket> Tickets { get; set; } = new List<Ticket>();
         public List<TicketPriorityHistory> FromTicketPriorityHistories { get; set; } = new List<TicketPriorityHistory>();
         public List<TicketPriorityHistory> ToTicketPriorityHistories { get; set; } = new List<TicketPriorityHistory>();
@@ -28,7 +31,13 @@ namespace mvp.tickets.data.Models
             });
 
             modelBuilder.Entity<TicketPriority>()
-                .HasIndex(p => p.Name)
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketPriorities)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TicketPriority>()
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketPriority>().ToTable(TableName);

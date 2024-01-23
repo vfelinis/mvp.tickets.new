@@ -3,7 +3,7 @@ import { observable, action, makeObservable } from 'mobx';
 import { IBaseReportQueryRequest, IBaseReportQueryResponse, IBaseCommandResponse, IBaseQueryResponse } from '../Models/Base';
 import { RootStore } from './RootStore';
 import { ApiRoutesHelper } from '../Helpers/ApiRoutesHelper';
-import { IUserCreateCommandRequest, IUserModel, IUserUpdateCommandRequest } from '../Models/User';
+import { IUserAssigneeModel, IUserCreateCommandRequest, IUserForgotPasswordCommandRequest, IUserLoginByCodeCommandRequest, IUserLoginCommandRequest, IUserModel, IUserRegisterCommandRequest, IUserRegisterRequestCommandRequest, IUserResetPasswordCommandRequest, IUserUpdateCommandRequest } from '../Models/User';
 import { browserHistory } from '..';
 import { UIRoutesHelper } from '../Helpers/UIRoutesHelper';
 
@@ -13,6 +13,7 @@ export class UserStore {
     wasInit: boolean;
     currentUser: IUserModel | null;
     report: IUserModel[];
+    assignees: IUserAssigneeModel[];
     total: number;
     editableUser: IUserModel | null;
 
@@ -22,6 +23,7 @@ export class UserStore {
         this.wasInit = false;
         this.currentUser = null;
         this.report = [];
+        this.assignees = [];
         this.total = 0;
         this.editableUser = null;
         makeObservable(this, {
@@ -29,9 +31,11 @@ export class UserStore {
             wasInit: observable,
             currentUser: observable,
             report: observable,
+            assignees: observable,
             total: observable,
             editableUser: observable,
             login: action,
+            loginByCode: action,
             logout: action,
             setCurrentUser: action,
             setReport: action,
@@ -41,7 +45,12 @@ export class UserStore {
             getDataForUpdateForm: action,
             update: action,
             setIsLoading: action,
+            setAssignees: action,
         });
+    }
+
+    setAssignees(assignees: IUserAssigneeModel[]) : void {
+        this.assignees = assignees;
     }
 
     setIsLoading(isLoading: boolean) : void {
@@ -71,12 +80,30 @@ export class UserStore {
                     this.setReport(response.data.data, response.data.total);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    getAssignees() : void {
+        this.setIsLoading(true);
+        axios.get<IBaseQueryResponse<IUserAssigneeModel[]>>(ApiRoutesHelper.user.assignees)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    this.setAssignees(response.data.data);
+
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -88,12 +115,12 @@ export class UserStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminUsers.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -105,12 +132,12 @@ export class UserStore {
                 if (response.data.isSuccess) {
                     this.setEditableUser(response.data.data);
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
@@ -122,42 +149,134 @@ export class UserStore {
                 if (response.data.isSuccess) {
                     browserHistory.push(UIRoutesHelper.adminUsers.getRoute());
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
                 this.setIsLoading(false);
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
-    login(idToken: string): void {
-        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, { idToken: idToken })
+    login(request: IUserLoginCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.login, request)
             .then(response => {
+                this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     this.setCurrentUser(response.data.data);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    loginByCode(request: IUserLoginByCodeCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<IUserModel>>(ApiRoutesHelper.user.loginByCode, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    this.setCurrentUser(response.data.data);
+
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 
     logout(): void {
+        this.setIsLoading(true);
         axios.post<IBaseCommandResponse<object>>(ApiRoutesHelper.user.logout)
             .then(response => {
+                this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     this.setCurrentUser(null);
 
                 } else {
-                    this.rootStore.errorStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }
             })
             .catch(error => {
-                this.rootStore.errorStore.setError(JSON.stringify(error));
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    registerRequest(request: IUserRegisterRequestCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.registerRequest, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.emailConfirmation.getRoute());
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    register(request: IUserRegisterCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.register, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.login.getRoute());
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    forgotPassword(request: IUserForgotPasswordCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.forgotPassword, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.emailConfirmation.getRoute());
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
+    resetPassword(request: IUserResetPasswordCommandRequest): void {
+        this.setIsLoading(true);
+        axios.post<IBaseCommandResponse<boolean>>(ApiRoutesHelper.user.resetPassword, request)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    browserHistory.push(UIRoutesHelper.login.getRoute());
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
             })
     }
 }

@@ -1,34 +1,120 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace mvp.tickets.data.Migrations
 {
+    /// <inheritdoc />
     public partial class Init : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
                 name: "dbo");
 
             migrationBuilder.CreateTable(
+                name: "Companies",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsRoot = table.Column<bool>(type: "boolean", nullable: false),
+                    ContactName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ContactEmail = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    ContactPhone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Host = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    IsDefaultHost = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Companies", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Files",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Content = table.Column<byte[]>(type: "bytea", nullable: true),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Files", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Invites",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Email = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    Company = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Code = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    DateSent = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Invites", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TicketStatuses",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsDefault = table.Column<bool>(type: "boolean", nullable: false),
+                    IsCompletion = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketStatuses", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TicketCategories",
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsRoot = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ParentCategoryId = table.Column<int>(type: "int", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsRoot = table.Column<bool>(type: "boolean", nullable: false),
+                    IsDefault = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false),
+                    ParentCategoryId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketCategories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketCategories_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_TicketCategories_TicketCategories_ParentCategoryId",
                         column: x => x.ParentCategoryId,
@@ -43,17 +129,25 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Level = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Level = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketPriorities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketPriorities_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -61,17 +155,25 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsDefault = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketQueues", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketQueues_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -79,52 +181,49 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketResolutions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketResolutions_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "TicketResponseTemplateType",
+                name: "TicketResponseTemplateTypes",
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TicketResponseTemplateType", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TicketStatuses",
-                schema: "dbo",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
-                    IsCompletion = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TicketStatuses", x => x.Id);
+                    table.PrimaryKey("PK_TicketResponseTemplateTypes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketResponseTemplateTypes_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -132,44 +231,27 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Email = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Permissions = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    IsLocked = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Email = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Password = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Permissions = table.Column<int>(type: "integer", nullable: false),
+                    IsLocked = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TicketResponseTemplates",
-                schema: "dbo",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Text = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketResponseTemplateTypeId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TicketResponseTemplates", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TicketResponseTemplates_TicketResponseTemplateType_TicketResponseTemplateTypeId",
-                        column: x => x.TicketResponseTemplateTypeId,
+                        name: "FK_Users_Companies_CompanyId",
+                        column: x => x.CompanyId,
                         principalSchema: "dbo",
-                        principalTable: "TicketResponseTemplateType",
+                        principalTable: "Companies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -179,14 +261,14 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    FromTicketStatusId = table.Column<int>(type: "int", nullable: true),
-                    ToTicketStatusId = table.Column<int>(type: "int", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    FromTicketStatusId = table.Column<int>(type: "integer", nullable: true),
+                    ToTicketStatusId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -208,27 +290,63 @@ namespace mvp.tickets.data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TicketResponseTemplates",
+                schema: "dbo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Text = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketResponseTemplateTypeId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketResponseTemplates", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketResponseTemplates_TicketResponseTemplateTypes_TicketR~",
+                        column: x => x.TicketResponseTemplateTypeId,
+                        principalSchema: "dbo",
+                        principalTable: "TicketResponseTemplateTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tickets",
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsClosed = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ReporterId = table.Column<int>(type: "int", nullable: false),
-                    AssigneeId = table.Column<int>(type: "int", nullable: true),
-                    TicketPriorityId = table.Column<int>(type: "int", nullable: true),
-                    TicketQueueId = table.Column<int>(type: "int", nullable: false),
-                    TicketResolutionId = table.Column<int>(type: "int", nullable: true),
-                    TicketStatusId = table.Column<int>(type: "int", nullable: false),
-                    TicketCategoryId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Token = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Source = table.Column<int>(type: "integer", nullable: false),
+                    IsClosed = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CompanyId = table.Column<int>(type: "integer", nullable: false),
+                    ReporterId = table.Column<int>(type: "integer", nullable: false),
+                    AssigneeId = table.Column<int>(type: "integer", nullable: true),
+                    TicketPriorityId = table.Column<int>(type: "integer", nullable: true),
+                    TicketQueueId = table.Column<int>(type: "integer", nullable: false),
+                    TicketResolutionId = table.Column<int>(type: "integer", nullable: true),
+                    TicketStatusId = table.Column<int>(type: "integer", nullable: false),
+                    TicketCategoryId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tickets_Companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalSchema: "dbo",
+                        principalTable: "Companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Tickets_TicketCategories_TicketCategoryId",
                         column: x => x.TicketCategoryId,
@@ -285,19 +403,19 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: true),
-                    FromTicketCategoryId = table.Column<int>(type: "int", nullable: false),
-                    ToTicketCategoryId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    FromTicketCategoryId = table.Column<int>(type: "integer", nullable: false),
+                    ToTicketCategoryId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketCategoryHistories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TicketCategoryHistories_TicketCategories_FromTicketCategoryId",
+                        name: "FK_TicketCategoryHistories_TicketCategories_FromTicketCategory~",
                         column: x => x.FromTicketCategoryId,
                         principalSchema: "dbo",
                         principalTable: "TicketCategories",
@@ -331,15 +449,15 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Text = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    IsInternal = table.Column<bool>(type: "bit", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    CreatorId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Text = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    IsInternal = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    CreatorId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -365,15 +483,15 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IsInternal = table.Column<bool>(type: "bit", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IsInternal = table.Column<bool>(type: "boolean", nullable: false),
+                    Type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    OldValue = table.Column<string>(type: "text", nullable: true),
+                    NewValue = table.Column<string>(type: "text", nullable: true),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -399,11 +517,11 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -429,19 +547,19 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: true),
-                    FromTicketPriorityId = table.Column<int>(type: "int", nullable: true),
-                    ToTicketPriorityId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    FromTicketPriorityId = table.Column<int>(type: "integer", nullable: true),
+                    ToTicketPriorityId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketPriorityHistories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TicketPriorityHistories_TicketPriorities_FromTicketPriorityId",
+                        name: "FK_TicketPriorityHistories_TicketPriorities_FromTicketPriority~",
                         column: x => x.FromTicketPriorityId,
                         principalSchema: "dbo",
                         principalTable: "TicketPriorities",
@@ -475,13 +593,13 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: true),
-                    FromTicketQueueId = table.Column<int>(type: "int", nullable: false),
-                    ToTicketQueueId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    FromTicketQueueId = table.Column<int>(type: "integer", nullable: false),
+                    ToTicketQueueId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -521,24 +639,17 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: true),
-                    FromTicketStatusId = table.Column<int>(type: "int", nullable: false),
-                    ToTicketStatusId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: true),
+                    FromTicketStatusId = table.Column<int>(type: "integer", nullable: false),
+                    ToTicketStatusId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TicketStatusHistories", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TicketStatusHistories_Tickets_TicketId",
-                        column: x => x.TicketId,
-                        principalSchema: "dbo",
-                        principalTable: "Tickets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_TicketStatusHistories_TicketStatuses_FromTicketStatusId",
                         column: x => x.FromTicketStatusId,
@@ -551,6 +662,13 @@ namespace mvp.tickets.data.Migrations
                         column: x => x.ToTicketStatusId,
                         principalSchema: "dbo",
                         principalTable: "TicketStatuses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_TicketStatusHistories_Tickets_TicketId",
+                        column: x => x.TicketId,
+                        principalSchema: "dbo",
+                        principalTable: "Tickets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -567,15 +685,15 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    FileName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Extension = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false),
-                    OriginalFileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DateModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    TicketCommentId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FileName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Extension = table.Column<string>(type: "character varying(5)", maxLength: 5, nullable: false),
+                    OriginalFileName = table.Column<string>(type: "text", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    DateCreated = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    DateModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TicketCommentId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -588,6 +706,49 @@ namespace mvp.tickets.data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Companies_Host",
+                schema: "dbo",
+                table: "Companies",
+                column: "Host",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Companies_IsRoot",
+                schema: "dbo",
+                table: "Companies",
+                column: "IsRoot",
+                unique: true,
+                filter: "\"IsRoot\" = true");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Companies_Name",
+                schema: "dbo",
+                table: "Companies",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invites_Email_Company",
+                schema: "dbo",
+                table: "Invites",
+                columns: new[] { "Email", "Company" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketCategories_CompanyId",
+                schema: "dbo",
+                table: "TicketCategories",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketCategories_IsDefault",
+                schema: "dbo",
+                table: "TicketCategories",
+                column: "IsDefault",
+                unique: true,
+                filter: "\"IsDefault\" = true AND \"IsActive\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TicketCategories_Name",
@@ -676,6 +837,12 @@ namespace mvp.tickets.data.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TicketPriorities_CompanyId",
+                schema: "dbo",
+                table: "TicketPriorities",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TicketPriorities_Name",
                 schema: "dbo",
                 table: "TicketPriorities",
@@ -731,12 +898,18 @@ namespace mvp.tickets.data.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TicketQueues_CompanyId",
+                schema: "dbo",
+                table: "TicketQueues",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TicketQueues_IsDefault",
                 schema: "dbo",
                 table: "TicketQueues",
                 column: "IsDefault",
                 unique: true,
-                filter: "[IsDefault] = 1 AND [IsActive] = 1");
+                filter: "\"IsDefault\" = true AND \"IsActive\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TicketQueues_Name",
@@ -744,6 +917,12 @@ namespace mvp.tickets.data.Migrations
                 table: "TicketQueues",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketResolutions_CompanyId",
+                schema: "dbo",
+                table: "TicketResolutions",
+                column: "CompanyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TicketResolutions_Name",
@@ -760,10 +939,29 @@ namespace mvp.tickets.data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_TicketResponseTemplateTypes_CompanyId",
+                schema: "dbo",
+                table: "TicketResponseTemplateTypes",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketResponseTemplateTypes_Name",
+                schema: "dbo",
+                table: "TicketResponseTemplateTypes",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tickets_AssigneeId",
                 schema: "dbo",
                 table: "Tickets",
                 column: "AssigneeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tickets_CompanyId",
+                schema: "dbo",
+                table: "Tickets",
+                column: "CompanyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tickets_ReporterId",
@@ -807,7 +1005,7 @@ namespace mvp.tickets.data.Migrations
                 table: "TicketStatuses",
                 column: "IsDefault",
                 unique: true,
-                filter: "[IsDefault] = 1 AND [IsActive] = 1");
+                filter: "\"IsDefault\" = true AND \"IsActive\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TicketStatuses_Name",
@@ -845,8 +1043,7 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo",
                 table: "TicketStatusRules",
                 columns: new[] { "FromTicketStatusId", "ToTicketStatusId" },
-                unique: true,
-                filter: "[FromTicketStatusId] IS NOT NULL AND [ToTicketStatusId] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TicketStatusRules_Name",
@@ -862,15 +1059,39 @@ namespace mvp.tickets.data.Migrations
                 column: "ToTicketStatusId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_CompanyId",
+                schema: "dbo",
+                table: "Users",
+                column: "CompanyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 schema: "dbo",
                 table: "Users",
                 column: "Email",
-                unique: true);
+                unique: true,
+                filter: "\"Email\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Phone",
+                schema: "dbo",
+                table: "Users",
+                column: "Phone",
+                unique: true,
+                filter: "\"Phone\" IS NOT NULL");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Files",
+                schema: "dbo");
+
+            migrationBuilder.DropTable(
+                name: "Invites",
+                schema: "dbo");
+
             migrationBuilder.DropTable(
                 name: "TicketCategoryHistories",
                 schema: "dbo");
@@ -912,7 +1133,7 @@ namespace mvp.tickets.data.Migrations
                 schema: "dbo");
 
             migrationBuilder.DropTable(
-                name: "TicketResponseTemplateType",
+                name: "TicketResponseTemplateTypes",
                 schema: "dbo");
 
             migrationBuilder.DropTable(
@@ -941,6 +1162,10 @@ namespace mvp.tickets.data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users",
+                schema: "dbo");
+
+            migrationBuilder.DropTable(
+                name: "Companies",
                 schema: "dbo");
         }
     }

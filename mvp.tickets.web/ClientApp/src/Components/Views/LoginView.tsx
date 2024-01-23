@@ -1,72 +1,78 @@
-import { FC, useLayoutEffect, useRef } from 'react';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import { initializeApp } from 'firebase/app';
-import { getAuth, EmailAuthProvider } from 'firebase/auth';
-import * as firebaseui from 'firebaseui'
-import 'firebaseui/dist/firebaseui.css'
-import useScript from 'react-use-scripts';
-import { Navigate } from 'react-router-dom';
+import { Box, Button, Typography } from '@mui/material';
+import { FC, useState, useEffect } from 'react';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
+import { ValidatorForm, TextValidator } from 'react-material-ui-form-validator';
 
-import Error from '../Shared/Error';
 import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyD2gQY5dzF3wmgJO4EIEV7yHLhIr9zUl3o',
-  authDomain: 'mvp-stack.firebaseapp.com',
-  projectId: 'mvp-stack',
-  storageBucket: 'mvp-stack.appspot.com',
-  messagingSenderId: '1055185177353',
-  appId: '1:1055185177353:web:29563c35fb436dede361d8'
-};
-const app = initializeApp(firebaseConfig);
+import { IUserLoginCommandRequest } from '../../Models/User';
+import { AuthTypes } from '../../Models/Company';
 
 interface ILoginViewProps {
 }
 
 const LoginView: FC<ILoginViewProps> = (props) => {
   const store = useRootStore();
-  const firebaseuiElement = useRef<HTMLDivElement | null>(null);
-
-  const { ready } = useScript({
-    src: 'https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth__ru.js',
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
+  const [request, setRequest] = useState<IUserLoginCommandRequest>({
+    email: '',
+    password: '',
   });
 
-  const firebaseUiConfig: firebaseui.auth.Config = {
-    callbacks: {
-      signInSuccessWithAuthResult: (authResult) => {
-        authResult.user.getIdToken()
-          .then((token: string) => {
-            store.userStore.login(token);
-          })
-          .catch((error: any) => {
-            store.errorStore.setError(JSON.stringify(error));
-          });
-        return false;
-      },
-    },
-    signInFlow: 'popup',
-    signInOptions: [
-      EmailAuthProvider.PROVIDER_ID,
-    ],
-  };
-
-  useLayoutEffect(() => {
-    if (ready && firebaseuiElement.current) {
-      (window as any).firebase = firebase;
-      const auth = getAuth(app);
-      const firebaseuiUMD: typeof firebaseui = (window as any).firebaseui;
-      const ui = new firebaseuiUMD.auth.AuthUI(auth);
-      ui.start(firebaseuiElement.current, firebaseUiConfig);
+  useEffect(() => {
+    if (code) {
+      store.userStore.loginByCode({code: code});
     }
-  }, [ready]);
+  }, []);
+
+  const handleSubmit = () => {
+    store.userStore.login(request);
+  }
 
   return <>
     {store.userStore.currentUser !== null ? <Navigate to={UIRoutesHelper.home.getRoute()} replace={true} /> : null}
-    <Error />
-    <div ref={firebaseuiElement} />
+    <Typography variant="h6" component="div">
+      Вход
+    </Typography>
+    <Box component={ValidatorForm}
+      onSubmit={handleSubmit}
+      onError={(errors: any) => console.log(errors)}
+      noValidate
+      autoComplete="off"
+      sx={{
+        '& .MuiTextField-root': { mt: 2, width: '100%' },
+        maxWidth: 500
+      }}
+    >
+      <TextValidator
+        label="Почта"
+        onChange={(e: React.FormEvent<HTMLInputElement>) => setRequest({ ...request, email: e.currentTarget.value })}
+        name="email"
+        value={request.email}
+        validators={['required', 'maxStringLength:250', 'isEmail']}
+        errorMessages={['Обязательное поле', 'Максимальная длина 250', 'Некорректная почта']}
+      />
+      <TextValidator
+        label="Пароль"
+        onChange={(e: React.FormEvent<HTMLInputElement>) => setRequest({ ...request, password: e.currentTarget.value })}
+        type="password"
+        name="password"
+        value={request.password}
+        validators={['required', 'maxStringLength:50']}
+        errorMessages={['Обязательное поле', 'Максимальная длина 50']}
+      />
+      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }} >
+        <Button type="submit">Войти</Button>
+        {
+          store.companyStore.current?.authType == AuthTypes.Standard &&
+            <Button component={Link} to={UIRoutesHelper.registerRequest.getRoute()}>Регистрация</Button>
+        }
+        <Button component={Link} to={UIRoutesHelper.forgotPassword.getRoute()}>Забыли пароль?</Button>
+      </Box>
+    </Box>
+
   </>;
 };
 

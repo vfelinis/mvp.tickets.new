@@ -30,7 +30,8 @@ namespace mvp.tickets.web.Controllers
             IBaseQueryResponse<IEnumerable<IResponseTemplateModel>> response = default;
             try
             {
-                var queryable = _dbContext.TicketResponseTemplates.AsNoTracking().AsQueryable();
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var queryable = _dbContext.TicketResponseTemplates.AsNoTracking().Where(s => s.TicketResponseTemplateType.CompanyId == companyId);
                 if (request?.Id > 0)
                 {
                     queryable = queryable.Where(x => x.Id == request.Id);
@@ -85,7 +86,10 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketResponseTemplates.AnyAsync(s => s.TicketResponseTemplateTypeId == request.TicketResponseTemplateTypeId && s.Name == request.Name)
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketResponseTemplates
+                    .AnyAsync(s => s.TicketResponseTemplateTypeId == request.TicketResponseTemplateTypeId
+                        && s.Name == request.Name && s.TicketResponseTemplateType.CompanyId == companyId)
                     .ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<int>
@@ -96,14 +100,26 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
+                var templateType = await _dbContext.TicketResponseTemplateTypes.FirstOrDefaultAsync(s => s.Id == request.TicketResponseTemplateTypeId
+                    && s.CompanyId == companyId);
+                if (templateType == null)
+                {
+                    return new BaseCommandResponse<int>
+                    {
+                        IsSuccess = false,
+                        Code = ResponseCodes.BadRequest,
+                        ErrorMessage = $"Выбранный тип шаблона не найден."
+                    };
+                }
+
                 var entry = new TicketResponseTemplate
                 {
                     Name = request.Name,
                     Text = request.Text,
                     IsActive = request.IsActive,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now,
-                    TicketResponseTemplateTypeId = request.TicketResponseTemplateTypeId
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                    TicketResponseTemplateTypeId = templateType.Id
                 };
                 await _dbContext.TicketResponseTemplates.AddAsync(entry).ConfigureAwait(false);
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
@@ -140,8 +156,11 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketResponseTemplates.AnyAsync(s => s.TicketResponseTemplateTypeId == request.TicketResponseTemplateTypeId && s.Name == request.Name
-                    && s.Id != request.Id).ConfigureAwait(false))
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketResponseTemplates
+                    .AnyAsync(s => s.TicketResponseTemplateTypeId == request.TicketResponseTemplateTypeId && s.Name == request.Name
+                        && s.Id != request.Id && s.TicketResponseTemplateType.CompanyId == companyId)
+                    .ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -152,7 +171,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var entry = await _dbContext.TicketResponseTemplates.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+                var entry = await _dbContext.TicketResponseTemplates.FirstOrDefaultAsync(s => s.Id == request.Id && s.TicketResponseTemplateType.CompanyId == companyId).ConfigureAwait(false);
                 if (entry == null)
                 {
                     return new BaseCommandResponse<bool>
@@ -166,8 +185,22 @@ namespace mvp.tickets.web.Controllers
                 entry.Name = request.Name;
                 entry.Text = request.Text;
                 entry.IsActive = request.IsActive;
-                entry.DateModified = DateTimeOffset.Now;
-                entry.TicketResponseTemplateTypeId = request.TicketResponseTemplateTypeId;
+                entry.DateModified = DateTimeOffset.UtcNow;
+                if (entry.TicketResponseTemplateTypeId != request.TicketResponseTemplateTypeId)
+                {
+                    var templateType = await _dbContext.TicketResponseTemplateTypes.FirstOrDefaultAsync(s => s.Id == request.TicketResponseTemplateTypeId
+                        && s.CompanyId == companyId);
+                    if (templateType == null)
+                    {
+                        return new BaseCommandResponse<bool>
+                        {
+                            IsSuccess = false,
+                            Code = ResponseCodes.BadRequest,
+                            ErrorMessage = $"Выбранный тип шаблона не найден."
+                        };
+                    }
+                    entry.TicketResponseTemplateTypeId = templateType.Id;
+                }
 
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 response = new BaseCommandResponse<bool>

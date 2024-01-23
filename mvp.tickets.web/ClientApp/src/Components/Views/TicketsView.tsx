@@ -16,16 +16,22 @@ const TicketsView: FC<ITicketsViewProps> = (props) => {
 
     useEffect(() => {
         store.ticketStore.getReport({
-            searchBy: null,
-            sortBy: 'dateModified',
+            isUserView: true,
+            searchBy: {},
+            sortBy: 'id',
             sortDirection: SortDirection.DESC,
             offset: 0
         });
         store.categoryStore.getCategories(true);
+        return () => {
+            store.ticketStore.setReport([], 0);
+            store.categoryStore.setCategories([]);
+        };
     }, []);
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
       store.ticketStore.getReport({
+          isUserView: true,
           searchBy: searchBy,
           sortBy: sortBy,
           sortDirection: direction,
@@ -59,7 +65,7 @@ const TicketsView: FC<ITicketsViewProps> = (props) => {
             },
             columns: [
                 { field: 'id', label: 'Id', type: ColumnType.Number, sortable: true, searchable: true },
-                { field: 'name', label: 'Название', type: ColumnType.String, sortable: false, searchable: false },
+                { field: 'name', label: 'Название', type: ColumnType.String, sortable: true, searchable: true },
                 {
                     field: 'isClosed', label: 'Закрыт', type: ColumnType.Boolean, sortable: false, searchable: true,
                     searchOptions: tableColumnBooleanSearchOptions

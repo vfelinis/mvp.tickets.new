@@ -33,7 +33,7 @@ namespace mvp.tickets.web.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            while (false && !stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -195,7 +195,7 @@ namespace mvp.tickets.web.Services
                                                 };
                                                 ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                                                var path = Path.Join(_environment.WebRootPath, $"/{TicketConstants.AttachmentFolder}/{user.Id}/{ticketCommentAttachment.FileName}.{ext}");
+                                                var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{user.Id}/{ticketCommentAttachment.FileName}.{ext}");
                                                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                                                 using (var stream = System.IO.File.Create(path))
                                                 {

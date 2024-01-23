@@ -30,7 +30,8 @@ namespace mvp.tickets.web.Controllers
             IBaseQueryResponse<IEnumerable<IStatusModel>> response = default;
             try
             {
-                var queryable = _dbContext.TicketStatuses.AsNoTracking().AsQueryable();
+                var compantId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var queryable = _dbContext.TicketStatuses.AsNoTracking().Where(s => s.CompanyId == compantId);
                 if (request?.Id > 0)
                 {
                     queryable = queryable.Where(x => x.Id == request.Id);
@@ -84,7 +85,8 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketStatuses.AnyAsync(s => s.Name == request.Name).ConfigureAwait(false))
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketStatuses.AnyAsync(s => s.Name == request.Name && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<int>
                     {
@@ -94,7 +96,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                if (request.IsDefault && await _dbContext.TicketStatuses.AnyAsync(s => s.IsDefault).ConfigureAwait(false))
+                if (request.IsDefault && await _dbContext.TicketStatuses.AnyAsync(s => s.IsDefault && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<int>
                     {
@@ -110,8 +112,9 @@ namespace mvp.tickets.web.Controllers
                     IsDefault = request.IsDefault,
                     IsCompletion = request.IsCompletion,
                     IsActive = request.IsActive,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                    CompanyId = companyId,
                 };
                 await _dbContext.TicketStatuses.AddAsync(entry).ConfigureAwait(false);
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
@@ -148,7 +151,8 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketStatuses.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketStatuses.AnyAsync(s => s.Name == request.Name && s.Id != request.Id && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -159,7 +163,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                if (request.IsDefault && await _dbContext.TicketStatuses.AnyAsync(s => s.IsDefault && s.Id != request.Id).ConfigureAwait(false))
+                if (request.IsDefault && await _dbContext.TicketStatuses.AnyAsync(s => s.IsDefault && s.Id != request.Id && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -170,7 +174,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var entry = await _dbContext.TicketStatuses.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+                var entry = await _dbContext.TicketStatuses.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == companyId).ConfigureAwait(false);
                 if (entry == null)
                 {
                     return new BaseCommandResponse<bool>
@@ -185,7 +189,7 @@ namespace mvp.tickets.web.Controllers
                 entry.IsDefault = request.IsDefault;
                 entry.IsCompletion = request.IsCompletion;
                 entry.IsActive = request.IsActive;
-                entry.DateModified = DateTimeOffset.Now;
+                entry.DateModified = DateTimeOffset.UtcNow;
 
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 response = new BaseCommandResponse<bool>

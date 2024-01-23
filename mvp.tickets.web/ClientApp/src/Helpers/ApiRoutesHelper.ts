@@ -1,12 +1,18 @@
 export class ApiRoutesHelper {
     static user = {
         report: '/api/users/report/',
+        assignees: '/api/users/assignees/',
         create: '/api/users/',
         get: (id: number) : string => `/api/users/${id}/`,
         update: (id: number) : string => `/api/users/${id}/`,
         current: '/api/users/current/',
         login: '/api/users/login/',
+        loginByCode: '/api/users/loginByCode/',
         logout: '/api/users/logout/',
+        registerRequest: '/api/users/registerRequest/',
+        register: '/api/users/register/',
+        forgotPassword: '/api/users/forgotPassword/',
+        resetPassword: '/api/users/resetPassword/',
         
     };
 
@@ -22,5 +28,23 @@ export class ApiRoutesHelper {
         create: '/api/tickets/',
         get: (id: number) : string => `/api/tickets/${id}/`,
         createComment: (id: number) : string => `/api/tickets/${id}/comments/`,
+        close: (id: number) : string => `/api/tickets/${id}/close/`,
+        update: (id: number) : string => `/api/tickets/${id}/`,
+    };
+
+    static invite = {
+        report: '/api/invites/',
+        create: '/api/invites/',
+        delete: (id: number) : string => `/api/invites/${id}/`,
+        validate: '/api/invites/validation/',
+    };
+
+    static company = {
+        report: '/api/companies/',
+        create: '/api/companies/',
+        current: '/api/companies/current/',
+        setActive: '/api/companies/activation/',
+        get: (id: number) : string => `/api/companies/${id}/`,
+        update: (id: number) : string => `/api/companies/${id}/`,
     };
 }

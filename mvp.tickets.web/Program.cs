@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Net.Http.Headers;
 using mvp.tickets.data;
 using mvp.tickets.data.Helpers;
 using mvp.tickets.domain.Constants;
+using mvp.tickets.domain.Helpers;
+using mvp.tickets.domain.Models;
 using mvp.tickets.web.Extensions;
 using mvp.tickets.web.Middlewares;
 using System.Globalization;
@@ -36,13 +40,43 @@ app.UseAuthentication();
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value.TrimStart('/').ToLower();
-    if (path.StartsWith(TicketConstants.AttachmentFolder))
+    if (path == "support")
+    {
+        if (context.User.Identity.IsAuthenticated && context.User.Claims.Any(s => s.Type == AuthConstants.AdminClaim))
+        {
+            using (var scope = context.RequestServices.CreateScope())
+            {
+                var user = System.Text.Json.JsonSerializer.Deserialize<UserModel>(context.User.Claims.First(s => s.Type == AuthConstants.UserDataClaim).Value);
+                var userData = new UserJWTData(user.Email, user.CompanyId, JWTType.Support);
+                var dbContext = scope.ServiceProvider.GetService<ApplicationDbContext>();
+                var rootCompany = await dbContext.Companies.AsNoTracking().FirstOrDefaultAsync(s => s.IsRoot && s.IsActive);
+                if (rootCompany == null || rootCompany.Id == user.CompanyId)
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync("BadRequest");
+                    return;
+                }
+                var code = TokenHelper.GenerateToken(userData, 5);
+                context.Response.StatusCode = StatusCodes.Status302Found;
+                context.Response.Headers[HeaderNames.Location] = $"https://{rootCompany.Host}/login/?code={code}";
+                return;
+            }
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+    }
+    else if (path.StartsWith(AppConstants.TicketFilesFolder))
     {
         if (context.User.Identity.IsAuthenticated)
         {
             var userId = int.Parse(context.User.Claims.First(s => s.Type == ClaimTypes.Sid).Value);
-            if (!context.User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim)
-                && !path.StartsWith($"{TicketConstants.AttachmentFolder}/{userId}/"))
+            var companyId = int.Parse(context.User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+            if (!(path.StartsWith($"{AppConstants.TicketFilesFolder}/{companyId}/") && context.User.Claims.Any(s => s.Type == AuthConstants.EmployeeClaim))
+                && !path.StartsWith($"{AppConstants.TicketFilesFolder}/{companyId}/{userId}/"))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized");
@@ -84,7 +118,46 @@ app.Use(async (context, next) =>
     }
     await next.Invoke();
 });
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
+});
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.LogoFilesFolder)),
+    RequestPath = $"/{AppConstants.LogoFilesFolder}",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
+});
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.TicketFilesFolder)),
+    RequestPath = $"/{AppConstants.TicketFilesFolder}",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromDays(7),
+            MustRevalidate = true
+        }.ToString();
+    }
+});
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

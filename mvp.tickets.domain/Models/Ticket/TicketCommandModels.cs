@@ -55,13 +55,28 @@ namespace mvp.tickets.domain.Models
         public List<IFormFile> Files { get; set; }
     }
 
-    public interface ITicketUpdateCommandRequest : ITicketCreateCommandRequest
+    public enum UpdatedTicketField
     {
-        int Id { get; set; }
+        None = 0,
+        Assignee = 1,
+        Priority = 2,
+        Status = 3,
+        Queue = 4,
+        Category = 5,
+        Resolution = 6
     }
 
-    public record TicketUpdateCommandRequest : TicketCreateCommandRequest, ITicketUpdateCommandRequest
+    public interface ITicketUpdateCommandRequest : IBaseCommandRequest
+    {
+        int Id { get; set; }
+        UpdatedTicketField UpdatedField { get; set; }
+        int Value { get; set; }
+    }
+
+    public record TicketUpdateCommandRequest : BaseCommandRequest, ITicketUpdateCommandRequest
     {
         public int Id { get; set; }
+        public UpdatedTicketField UpdatedField { get; set; }
+        public int Value { get; set; }
     }
 }

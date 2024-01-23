@@ -12,6 +12,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public List<Ticket> Tickets { get; set; } = new List<Ticket>();
         public List<TicketStatusRule> TicketFromStatusRules { get; set; } = new List<TicketStatusRule>();
         public List<TicketStatusRule> TicketToStatusRules { get; set; } = new List<TicketStatusRule>();
@@ -31,13 +34,19 @@ namespace mvp.tickets.data.Models
             });
 
             modelBuilder.Entity<TicketStatus>()
-                .HasIndex(p => p.Name)
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketStatuses)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TicketStatus>()
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketStatus>()
-                .HasIndex(p => p.IsDefault)
+                .HasIndex(p => new { p.CompanyId, p.IsDefault })
                 .IsUnique(true)
-                .HasFilter($"[{nameof(TicketStatus.IsDefault)}] = 1 AND [{nameof(TicketStatus.IsActive)}] = 1");
+                .HasFilter($"\"{nameof(TicketStatus.IsDefault)}\" = true AND \"{nameof(TicketStatus.IsActive)}\" = true");
 
             modelBuilder.Entity<TicketStatus>().ToTable(TableName);
         }

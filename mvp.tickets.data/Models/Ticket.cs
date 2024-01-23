@@ -6,6 +6,7 @@ namespace mvp.tickets.data.Models
     public class Ticket
     {
         public int Id { get; set; }
+        public Guid UniqueId { get; set; }
         public string Name { get; set; }
         public string Token { get; set; }
         public TicketSource Source { get; set; }
@@ -13,10 +14,15 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public int ReporterId { get; set; }
+        public string ReporterEmail { get; set; }
         public User Reporter { get; set; }
 
         public int? AssigneeId { get; set; }
+        public string AssigneeEmail { get; set; }
         public User Assignee { get; set; }
 
         public int? TicketPriorityId { get; set; }
@@ -53,10 +59,18 @@ namespace mvp.tickets.data.Models
             {
                 s.Property(p => p.Name).IsRequired(true).HasMaxLength(100);
                 s.Property(p => p.Token).IsRequired(false).HasMaxLength(250);
+                s.Property(p => p.ReporterEmail).IsRequired(true).HasMaxLength(250).HasDefaultValue("");
+                s.Property(p => p.AssigneeEmail).IsRequired(false).HasMaxLength(250);
                 s.Property(p => p.AssigneeId).IsRequired(false);
                 s.Property(p => p.TicketPriorityId).IsRequired(false);
                 s.Property(p => p.TicketResolutionId).IsRequired(false);
             });
+
+            modelBuilder.Entity<Ticket>()
+                .HasOne(c => c.Company)
+                .WithMany(p => p.Tickets)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Ticket>()
                 .HasOne(c => c.Reporter)
@@ -99,6 +113,10 @@ namespace mvp.tickets.data.Models
                 .WithMany(p => p.Tickets)
                 .HasForeignKey(c => c.TicketCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Ticket>()
+                .HasIndex(s => s.UniqueId)
+                .IsUnique(true);
 
             modelBuilder.Entity<Ticket>().ToTable(TableName);
         }

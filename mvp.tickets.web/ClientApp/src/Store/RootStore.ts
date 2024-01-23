@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { CategoryStore } from './CategoryStore';
-import { ErrorStore } from './ErrorStore';
+import { InfoStore } from './InfoStore';
 import { PriorityStore } from './PriorityStore';
 import { QueueStore } from './QueueStore';
 import { ResolutionStore } from './ResolutionStore';
@@ -9,10 +9,13 @@ import { ResponseTemplateTypeStore } from './ResponseTemplateTypeStore';
 import { StatusStore } from './StatusStore';
 import { TicketStore } from './TicketStore';
 import { UserStore } from './UserStore';
+import { InviteStore } from './InviteStore';
+import { CompanyStore } from './CompanyStore';
+import { ICompanyModel } from '../Models/Company';
 
 export class RootStore {
   userStore: UserStore;
-  errorStore: ErrorStore;
+  infoStore: InfoStore;
   categoryStore: CategoryStore;
   priorityStore: PriorityStore;
   queueStore: QueueStore;
@@ -21,10 +24,12 @@ export class RootStore {
   responseTemplateStore: ResponseTemplateStore;
   statusStore: StatusStore;
   ticketStore: TicketStore;
+  inviteStore: InviteStore;
+  companyStore: CompanyStore;
 
   constructor() {
     this.userStore = new UserStore(this);
-    this.errorStore = new ErrorStore(this);
+    this.infoStore = new InfoStore(this);
     this.categoryStore = new CategoryStore(this);
     this.priorityStore = new PriorityStore(this);
     this.queueStore = new QueueStore(this);
@@ -33,6 +38,8 @@ export class RootStore {
     this.responseTemplateStore = new ResponseTemplateStore(this);
     this.statusStore = new StatusStore(this);
     this.ticketStore = new TicketStore(this);
+    this.inviteStore = new InviteStore(this);
+    this.companyStore = new CompanyStore(this);
   }
 }
 

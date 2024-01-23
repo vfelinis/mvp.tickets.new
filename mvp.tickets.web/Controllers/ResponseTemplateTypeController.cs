@@ -30,7 +30,8 @@ namespace mvp.tickets.web.Controllers
             IBaseQueryResponse<IEnumerable<IResponseTemplateTypeModel>> response = default;
             try
             {
-                var queryable = _dbContext.TicketResponseTemplateTypes.AsNoTracking().AsQueryable();
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                var queryable = _dbContext.TicketResponseTemplateTypes.AsNoTracking().Where(s => s.CompanyId == companyId);
                 if (request?.Id > 0)
                 {
                     queryable = queryable.Where(x => x.Id == request.Id);
@@ -82,7 +83,8 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketResponseTemplateTypes.AnyAsync(s => s.Name == request.Name).ConfigureAwait(false))
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketResponseTemplateTypes.AnyAsync(s => s.Name == request.Name && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<int>
                     {
@@ -96,8 +98,9 @@ namespace mvp.tickets.web.Controllers
                 {
                     Name = request.Name,
                     IsActive = request.IsActive,
-                    DateCreated = DateTimeOffset.Now,
-                    DateModified = DateTimeOffset.Now,
+                    DateCreated = DateTimeOffset.UtcNow,
+                    DateModified = DateTimeOffset.UtcNow,
+                    CompanyId = companyId,
                 };
                 await _dbContext.TicketResponseTemplateTypes.AddAsync(entry).ConfigureAwait(false);
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
@@ -134,7 +137,8 @@ namespace mvp.tickets.web.Controllers
 
             try
             {
-                if (await _dbContext.TicketResponseTemplateTypes.AnyAsync(s => s.Name == request.Name && s.Id != request.Id).ConfigureAwait(false))
+                var companyId = int.Parse(User.Claims.First(s => s.Type == AuthConstants.CompanyIdClaim).Value);
+                if (await _dbContext.TicketResponseTemplateTypes.AnyAsync(s => s.Name == request.Name && s.Id != request.Id && s.CompanyId == companyId).ConfigureAwait(false))
                 {
                     return new BaseCommandResponse<bool>
                     {
@@ -145,7 +149,7 @@ namespace mvp.tickets.web.Controllers
                     };
                 }
 
-                var entry = await _dbContext.TicketResponseTemplateTypes.FirstOrDefaultAsync(s => s.Id == request.Id).ConfigureAwait(false);
+                var entry = await _dbContext.TicketResponseTemplateTypes.FirstOrDefaultAsync(s => s.Id == request.Id && s.CompanyId == companyId).ConfigureAwait(false);
                 if (entry == null)
                 {
                     return new BaseCommandResponse<bool>
@@ -158,7 +162,7 @@ namespace mvp.tickets.web.Controllers
 
                 entry.Name = request.Name;
                 entry.IsActive = request.IsActive;
-                entry.DateModified = DateTimeOffset.Now;
+                entry.DateModified = DateTimeOffset.UtcNow;
 
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 response = new BaseCommandResponse<bool>

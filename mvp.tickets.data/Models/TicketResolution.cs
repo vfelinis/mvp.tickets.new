@@ -10,6 +10,9 @@ namespace mvp.tickets.data.Models
         public DateTimeOffset DateCreated { get; set; }
         public DateTimeOffset DateModified { get; set; }
 
+        public int CompanyId { get; set; }
+        public Company Company { get; set; }
+
         public List<Ticket> Tickets { get; set; } = new List<Ticket>();
     }
 
@@ -25,7 +28,13 @@ namespace mvp.tickets.data.Models
             });
 
             modelBuilder.Entity<TicketResolution>()
-                .HasIndex(p => p.Name)
+                .HasOne(c => c.Company)
+                .WithMany(p => p.TicketResolutions)
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TicketResolution>()
+                .HasIndex(p => new { p.CompanyId, p.Name })
                 .IsUnique(true);
 
             modelBuilder.Entity<TicketResolution>().ToTable(TableName);

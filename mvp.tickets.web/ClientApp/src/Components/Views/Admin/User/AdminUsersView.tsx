@@ -17,15 +17,17 @@ const AdminUsersView: FC<IAdminUsersViewProps> = (props) => {
 
     useEffect(() => {
         store.userStore.getReport({
-            searchBy: null,
+            isUserView: false,
+            searchBy: {},
             sortBy: 'id',
-            sortDirection: SortDirection.ASC,
+            sortDirection: SortDirection.DESC,
             offset: 0
         });
     }, []);
 
     const actionHandle = (searchBy: object, offset: number, sortBy: string, direction: SortDirection): void => {
         store.userStore.getReport({
+            isUserView: false,
             searchBy: searchBy,
             sortBy: sortBy,
             sortDirection: direction,
@@ -43,7 +45,7 @@ const AdminUsersView: FC<IAdminUsersViewProps> = (props) => {
                 editRoute: (row: IUserModel): string => UIRoutesHelper.adminUsersUpdate.getRoute(row.id),
                 isServerSide: true,
                 actionHandle: actionHandle,
-                total: store.userStore.report.length,
+                total: store.userStore.total,
             },
             columns: [
                 { field: 'id', label: 'Id', type: ColumnType.Number, sortable: true, searchable: true },
@@ -52,7 +54,7 @@ const AdminUsersView: FC<IAdminUsersViewProps> = (props) => {
                 { field: 'lastName', label: 'Фамилия', type: ColumnType.String, sortable: true, searchable: true },
                 {
                     field: 'permissions', label: 'Доступ', type: ColumnType.Number, sortable: false, searchable: true,
-                    valueFormater: (value: Permissions): string => {
+                    valueFormater: (item: IUserModel, value: Permissions): any => {
                         let label = '';
                         if (hasPermission(value, Permissions.Admin)) {
                             label += 'Администратор; ';

@@ -19,12 +19,16 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import HomeIcon from '@mui/icons-material/Home';
+import MailIcon from '@mui/icons-material/Mail';
+import BusinessIcon from '@mui/icons-material/Business';
+import EqualizerIcon from '@mui/icons-material/Equalizer';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import BadgeIcon from '@mui/icons-material/Badge';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import Error from './Error';
+import Modal from './Modal';
 import { useRootStore } from '../../Store/RootStore';
 import { UIRoutesHelper } from '../../Helpers/UIRoutesHelper';
 import { hasPermission, Permissions } from '../../Enums/Permissions';
@@ -135,7 +139,9 @@ const Layout: FC<ILayoutProps> = (props) => {
         || store.responseTemplateStore.isLoading
         || store.responseTemplateTypeStore.isLoading
         || store.statusStore.isLoading
-        || store.ticketStore.isLoading;
+        || store.ticketStore.isLoading
+        || store.inviteStore.isLoading
+        || store.companyStore.isLoading;
 
     return <>
         {isLoading && <Box sx={{
@@ -159,14 +165,26 @@ const Layout: FC<ILayoutProps> = (props) => {
                         onClick={handleDrawerOpen}
                         edge="start"
                         sx={{
-                            marginRight: 5,
+                            marginRight: 2,
                             ...(open && { display: 'none' }),
                         }}
                     >
                         <MenuIcon />
                     </IconButton>
+                    {
+                        store.companyStore.current?.logo &&
+                        <Box
+                            component="img"
+                            sx={{
+                                height: 32,
+                                marginRight: 2,
+                            }}
+                            alt="Logo"
+                            src={store.companyStore.current.logo}
+                        />
+                    }
                     <Typography variant="h6" noWrap component="div">
-                        MVP Tickets
+                        {store.companyStore.current?.name}
                     </Typography>
                 </Toolbar>
             </AppBar>
@@ -287,6 +305,9 @@ const Layout: FC<ILayoutProps> = (props) => {
                                     'aria-labelledby': 'admin-button',
                                 }}
                             >
+                                <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminCompany.getRoute()}>
+                                    Предприятие
+                                </MenuItem>
                                 <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminUsers.getRoute()}>
                                     Пользователи
                                 </MenuItem>
@@ -314,6 +335,12 @@ const Layout: FC<ILayoutProps> = (props) => {
                                 <MenuItem onClick={handleAdminClose} component={Link} to={UIRoutesHelper.adminResponseTemplates.getRoute()}>
                                     Шаблоны
                                 </MenuItem>
+                                {
+                                    store.companyStore.current?.isRoot !== true &&
+                                    <MenuItem onClick={handleAdminClose} component={Link} to="/support" target="_blank">
+                                        Техническая поддержка
+                                    </MenuItem>
+                                }
                             </Menu>
                         </List>
                     </>
@@ -346,6 +373,74 @@ const Layout: FC<ILayoutProps> = (props) => {
                         </List>
                     </>
                 }
+                {
+                    store.companyStore.current?.isRoot === true && store.userStore.currentUser != null && hasPermission(store.userStore.currentUser.permissions, Permissions.Admin) &&
+                    <>
+                        <Divider />
+                        <List>
+                            <ListItem key="Приглашения" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.invites.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <MailIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Приглашения" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                            <ListItem key="Предприятия" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.companies.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <BusinessIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Предприятия" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                            <ListItem key="Метрики" disablePadding sx={{ display: 'block' }} onClick={() => navigate(UIRoutesHelper.metrics.getRoute(), { replace: true })}>
+                                <ListItemButton
+                                    sx={{
+                                        minHeight: 48,
+                                        justifyContent: open ? 'initial' : 'center',
+                                        px: 2.5,
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            mr: open ? 3 : 'auto',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <EqualizerIcon />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Метрики" sx={{ opacity: open ? 1 : 0 }} />
+                                </ListItemButton>
+                            </ListItem>
+                        </List>
+                    </>
+                }
                 <Divider />
                 {store.userStore.currentUser != null &&
                     <List>
@@ -371,11 +466,12 @@ const Layout: FC<ILayoutProps> = (props) => {
                         </ListItem>
                     </List>
                 }
-                
+
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
                 <DrawerHeader />
                 <Error />
+                <Modal />
                 <Outlet />
             </Box>
         </Box>
