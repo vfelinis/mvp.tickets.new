@@ -33,6 +33,7 @@ export class CompanyStore {
             getDataForUpdateForm: action,
             update: action,
             setCurrent: action,
+            getCurrent: action,
         });
     }
 
@@ -70,6 +71,24 @@ export class CompanyStore {
             })
     }
 
+    getCurrent() : void {
+        this.setIsLoading(true);
+        axios.get<IBaseQueryResponse<ICompanyModel>>(ApiRoutesHelper.company.current)
+            .then(response => {
+                this.setIsLoading(false);
+                if (response.data.isSuccess) {
+                    this.setCurrent(response.data.data);
+
+                } else {
+                    this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
+                }
+            })
+            .catch(error => {
+                this.setIsLoading(false);
+                this.rootStore.infoStore.setError(JSON.stringify(error));
+            })
+    }
+
     create(request: FormData) : void {
         this.setIsLoading(true);
         axios.post<IBaseCommandResponse<string>>(ApiRoutesHelper.company.create, request, { headers: { "Content-Type": "multipart/form-data" } })
@@ -77,6 +96,7 @@ export class CompanyStore {
                 this.setIsLoading(false);
                 if (response.data.isSuccess) {
                     browserHistory.push(response.data.data);
+                    this.getCurrent();
                 } else {
                     this.rootStore.infoStore.setError(response.data.errorMessage ?? response.data.code.toString());
                 }

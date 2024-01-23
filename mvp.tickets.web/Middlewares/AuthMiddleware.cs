@@ -17,11 +17,10 @@ namespace mvp.tickets.web.Middlewares
             var path = context.Request.Path.Value.Trim('/').ToLower();
             if (string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase)
                 && !path.StartsWith("api")
-                && !path.StartsWith(AppConstants.TicketFilesFolder)
-                && !path.StartsWith(AppConstants.LogoFilesFolder)
                 && path != "login"
                 && path != "register"
-                && path != "resetPassword"
+                && path != "resetpassword"
+                && path != "companies/create"
                 && !context.Request.Query.ContainsKey("token")
                 && !context.User.Identity.IsAuthenticated)
             {
