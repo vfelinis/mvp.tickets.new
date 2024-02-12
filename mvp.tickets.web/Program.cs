@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
@@ -40,10 +38,6 @@ app.UseAuthentication();
 
 app.Use(async (context, next) =>
 {
-    //if (context.Request.Query.ContainsKey("host"))
-    //{
-    //    context.Response.Cookies.Append("host", context.Request.Query["host"]);
-    //}
     var path = context.Request.Path.Value.TrimStart('/').ToLower();
     if (path == "support")
     {
