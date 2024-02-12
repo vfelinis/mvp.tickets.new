@@ -95,7 +95,7 @@ namespace mvp.tickets.web.Controllers
 
                 await emailService.Send(entry.Email,
                     $"Приглашение в MVP Tickets",
-                    $"Для регистрации предприятия перейдите по следующей ссылке <a href='https://{AppConstants.DefaultHost}/companies/create/?email={entry.Email}&code={entry.Code}'>нажать здесь</a>",
+                    $"Для регистрации предприятия перейдите по следующей ссылке <a href='https://localhost:5101/companies/create/?email={entry.Email}&code={entry.Code}&host=tickets.mvp-stack.ru'>нажать здесь</a>",
                     isBodyHtml: true);
 
                 response = new BaseCommandResponse<int>

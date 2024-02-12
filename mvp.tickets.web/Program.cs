@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Net.Http.Headers;
 using mvp.tickets.data;
 using mvp.tickets.data.Helpers;
@@ -39,6 +40,10 @@ app.UseAuthentication();
 
 app.Use(async (context, next) =>
 {
+    if (context.Request.Query.ContainsKey("host"))
+    {
+        context.Response.Cookies.Append("host", context.Request.Query["host"]);
+    }
     var path = context.Request.Path.Value.TrimStart('/').ToLower();
     if (path == "support")
     {
@@ -58,7 +63,8 @@ app.Use(async (context, next) =>
                 }
                 var code = TokenHelper.GenerateToken(userData, 5);
                 context.Response.StatusCode = StatusCodes.Status302Found;
-                context.Response.Headers[HeaderNames.Location] = $"https://{rootCompany.Host}/login/?code={code}";
+                context.Response.Headers[HeaderNames.Location] = $"https://localhost:5101/login/?code={code}&host=tickets.mvp-stack.ru";
+                await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 return;
             }
         }
@@ -114,40 +120,12 @@ app.Use(async (context, next) =>
             await context.Response.WriteAsync("Unauthorized");
             return;
         }
-
     }
+
     await next.Invoke();
 });
 app.UseStaticFiles(new StaticFileOptions
 {
-    OnPrepareResponse = ctx =>
-    {
-        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
-        {
-            Public = true,
-            MaxAge = TimeSpan.FromDays(7),
-            MustRevalidate = true
-        }.ToString();
-    }
-});
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.LogoFilesFolder)),
-    RequestPath = $"/{AppConstants.LogoFilesFolder}",
-    OnPrepareResponse = ctx =>
-    {
-        ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
-        {
-            Public = true,
-            MaxAge = TimeSpan.FromDays(7),
-            MustRevalidate = true
-        }.ToString();
-    }
-});
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(Path.Combine(app.Configuration.GetValue<string>("FilesPath"), AppConstants.TicketFilesFolder)),
-    RequestPath = $"/{AppConstants.TicketFilesFolder}",
     OnPrepareResponse = ctx =>
     {
         ctx.Context.Response.Headers[HeaderNames.CacheControl] = new System.Net.Http.Headers.CacheControlHeaderValue
