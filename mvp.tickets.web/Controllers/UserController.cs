@@ -87,7 +87,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
@@ -131,7 +131,7 @@ namespace mvp.tickets.web.Controllers
                 var userData = new UserJWTData(email, company.Id, JWTType.Register);
                 var code = TokenHelper.GenerateToken(userData, 30);
                 await emailService.Send(email, $"{company.Name} - регистрация.",
-                    $"Для продолжения регистрации перейдите по следующей ссылке <a href='https://localhost:5101/register/?email={email}&code={code}&host=test.mvp-stack.ru'>нажмите здесь</a>", true);
+                    $"Для продолжения регистрации перейдите по следующей ссылке <a href='https://{host}/register/?email={email}&code={code}'>нажмите здесь</a>", true);
 
                 response = new BaseCommandResponse<bool>
                 {
@@ -179,7 +179,7 @@ namespace mvp.tickets.web.Controllers
                 }
 
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
@@ -261,7 +261,7 @@ namespace mvp.tickets.web.Controllers
                 if (request != null)
                 {
                     var host = Request.Host.Value.ToLower();
-                    if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                    if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                     {
                         host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                     }
@@ -308,7 +308,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
@@ -634,7 +634,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
@@ -667,7 +667,7 @@ namespace mvp.tickets.web.Controllers
                 var userData = new UserJWTData(email, company.Id, JWTType.ResetPassword);
                 var code = TokenHelper.GenerateToken(userData, 30);
                 await emailService.Send(email, $"{company.Name} - сброс пароля.",
-                    $"Для сброса пароля перейдите по следующей ссылке <a href='https://localhost:5101/resetPassword/?code={code}&host=test.mvp-stack.ru'>нажмите здесь</a>", true);
+                    $"Для сброса пароля перейдите по следующей ссылке <a href='https://{host}/resetPassword/?code={code}'>нажмите здесь</a>", true);
 
                 response = new BaseCommandResponse<bool>
                 {
@@ -714,7 +714,7 @@ namespace mvp.tickets.web.Controllers
                 }
 
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!_env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }

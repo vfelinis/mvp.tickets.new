@@ -40,10 +40,10 @@ app.UseAuthentication();
 
 app.Use(async (context, next) =>
 {
-    if (context.Request.Query.ContainsKey("host"))
-    {
-        context.Response.Cookies.Append("host", context.Request.Query["host"]);
-    }
+    //if (context.Request.Query.ContainsKey("host"))
+    //{
+    //    context.Response.Cookies.Append("host", context.Request.Query["host"]);
+    //}
     var path = context.Request.Path.Value.TrimStart('/').ToLower();
     if (path == "support")
     {
@@ -63,8 +63,7 @@ app.Use(async (context, next) =>
                 }
                 var code = TokenHelper.GenerateToken(userData, 5);
                 context.Response.StatusCode = StatusCodes.Status302Found;
-                context.Response.Headers[HeaderNames.Location] = $"https://localhost:5101/login/?code={code}&host=tickets.mvp-stack.ru";
-                await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                context.Response.Headers[HeaderNames.Location] = $"https://{rootCompany.Host}/login/?code={code}";
                 return;
             }
         }

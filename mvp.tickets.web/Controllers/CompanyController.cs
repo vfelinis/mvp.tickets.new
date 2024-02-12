@@ -37,7 +37,7 @@ namespace mvp.tickets.web.Controllers
             try
             {
                 var host = Request.Host.Value.ToLower();
-                if (Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
+                if (!env.IsProduction() && Request.Cookies.ContainsKey(AppConstants.DebugHostCookie))
                 {
                     host = Request.Cookies[AppConstants.DebugHostCookie].ToLower();
                 }
@@ -190,12 +190,12 @@ namespace mvp.tickets.web.Controllers
                         await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                     }
                 }
-                HttpContext.Response.Cookies.Append("host", "test.mvp-stack.ru");
+
                 response = new BaseCommandResponse<string>
                 {
                     IsSuccess = true,
                     Code = ResponseCodes.Success,
-                    Data = $"https://localhost:5101/"
+                    Data = $"https://{entry.Host}/"
                 };
             }
             catch (Exception ex)
