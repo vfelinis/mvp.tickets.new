@@ -195,13 +195,13 @@ namespace mvp.tickets.web.Services
                                                 };
                                                 ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                                                var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{user.Id}/{ticketCommentAttachment.FileName}.{ext}");
-                                                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                                                using (var stream = System.IO.File.Create(path))
-                                                {
-                                                    file.Seek(0, SeekOrigin.Begin);
-                                                    await file.CopyToAsync(stream);
-                                                }
+                                                //var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{user.Id}/{ticketCommentAttachment.FileName}.{ext}");
+                                                //Directory.CreateDirectory(Path.GetDirectoryName(path));
+                                                //using (var stream = System.IO.File.Create(path))
+                                                //{
+                                                //    file.Seek(0, SeekOrigin.Begin);
+                                                //    await file.CopyToAsync(stream);
+                                                //}
                                             }
                                         }
                                     }

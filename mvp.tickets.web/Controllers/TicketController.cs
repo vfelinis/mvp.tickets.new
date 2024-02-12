@@ -11,6 +11,7 @@ using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Models;
+using mvp.tickets.domain.Services;
 using mvp.tickets.web.Helpers;
 using mvp.tickets.web.Kafka;
 using Npgsql;
@@ -29,9 +30,10 @@ namespace mvp.tickets.web.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly ISettings _settings;
         private readonly IDistributedCache _cache;
+        private readonly IS3Service _s3Service;
 
         public TicketController(ApplicationDbContext dbContext, IConnectionStrings connectionStrings, ILogger<TicketController> logger, IWebHostEnvironment environment,
-            ISettings settings, IDistributedCache cache)
+            ISettings settings, IDistributedCache cache, IS3Service s3Service)
         {
             _dbContext = dbContext;
             _connectionStrings = connectionStrings;
@@ -39,6 +41,7 @@ namespace mvp.tickets.web.Controllers
             _environment = environment;
             _settings = settings;
             _cache = cache;
+            _s3Service = s3Service;
         }
 
         [Authorize]
@@ -478,11 +481,16 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}");
-                            Directory.CreateDirectory(Path.GetDirectoryName(path));
-                            using (var stream = System.IO.File.Create(path))
+                            var fileResult = await _s3Service.PutObjectAsync($"{AppConstants.TicketFilesFolder}/{companyId}/{entry.ReporterId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}",
+                                file.OpenReadStream());
+                            if (!fileResult)
                             {
-                                await file.CopyToAsync(stream);
+                                return new BaseCommandResponse<bool>
+                                {
+                                    IsSuccess = false,
+                                    Code = ResponseCodes.Error,
+                                    ErrorMessage = $"Ошибка при сохранении вложенного файла {file.FileName}."
+                                };
                             }
                         }
                     }
@@ -673,11 +681,17 @@ ORDER BY t.""{typeof(Ticket).GetProperties().FirstOrDefault(s => s.Name == reque
                             };
                             ticketComment.TicketCommentAttachments.Add(ticketCommentAttachment);
 
-                            var path = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesTempFolder}/{companyId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}");
-                            Directory.CreateDirectory(Path.GetDirectoryName(path));
-                            using (var stream = System.IO.File.Create(path))
+                            var fileResult = await _s3Service.PutObjectAsync($"{AppConstants.TicketFilesTempFolder}/{companyId}/{ticketCommentAttachment.FileName}.{ticketCommentAttachment.Extension}",
+                                file.OpenReadStream());
+                            
+                            if (!fileResult)
                             {
-                                await file.CopyToAsync(stream);
+                                return new BaseCommandResponse<int>
+                                {
+                                    IsSuccess = false,
+                                    Code = ResponseCodes.Error,
+                                    ErrorMessage = $"Ошибка при сохранении вложенного файла {file.FileName}."
+                                };
                             }
                         }
                     }

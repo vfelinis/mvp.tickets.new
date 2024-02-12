@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Minio;
 using mvp.tickets.data;
 using mvp.tickets.data.Stores;
 using mvp.tickets.domain.Constants;
@@ -77,6 +78,8 @@ namespace mvp.tickets.web.Extensions
             services.AddTransient<IUserService, UserService>();
             services.AddTransient<ICategoryService, CategoryService>();
             services.AddTransient<IEmailService, EmailService>();
+
+            services.AddSingleton<IS3Service, S3Service>();
             #endregion
 
 
@@ -87,9 +90,14 @@ namespace mvp.tickets.web.Extensions
                 Host = config.GetValue<string>("Host"),
                 ApiKey = config.GetValue<string>("ApiKey"),
                 TelegramToken = config.GetValue<string>("TelegramToken"),
-                FilesPath = config.GetValue<string>("FilesPath"),
+                S3 = config.GetSection("S3").Get<S3Settings>(),
             };
             services.AddSingleton<ISettings>(settings);
+
+            services.AddMinio(configureClient => configureClient
+                .WithEndpoint(settings.S3.Url)
+                .WithSSL(true)
+                .WithCredentials(settings.S3.AccessKey, settings.S3.SecretKey));
         }
     }
 }

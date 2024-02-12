@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using mvp.tickets.data;
 using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Models;
+using mvp.tickets.domain.Services;
 using mvp.tickets.web.Helpers;
 
 namespace mvp.tickets.web.Kafka
@@ -16,9 +17,10 @@ namespace mvp.tickets.web.Kafka
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IDistributedCache _cache;
         private readonly ISettings _settings;
+        private readonly IS3Service _s3Service;
 
         public RequestTimeConsumer(IConnectionStrings connectionStrings, ILogger<RequestTimeConsumer> logger, IServiceScopeFactory serviceScopeFactory,
-            IDistributedCache cache, ISettings settings)
+            IDistributedCache cache, ISettings settings, IS3Service s3Service)
         {
             _topic = KafkaModels._ticketsTopic;
             var consumerConfig = new ConsumerConfig
@@ -36,6 +38,7 @@ namespace mvp.tickets.web.Kafka
             _serviceScopeFactory = serviceScopeFactory;
             _cache = cache;
             _settings = settings;
+            _s3Service = s3Service;
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -88,7 +91,7 @@ namespace mvp.tickets.web.Kafka
             base.Dispose();
         }
 
-        private void Process(ConsumeResult<Ignore, string> cr)
+        private async void Process(ConsumeResult<Ignore, string> cr)
         {
             using (var scope = _serviceScopeFactory.CreateScope())
             {
@@ -142,9 +145,10 @@ namespace mvp.tickets.web.Kafka
 
                     foreach (var item in data.Comment.TicketCommentAttachments)
                     {
-                        var fromPath = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesTempFolder}/{data.CompanyId}/{item.FileName}.{item.Extension}");
-                        var toPath = Path.Join(_settings.FilesPath, $"/{AppConstants.TicketFilesFolder}/{data.CompanyId}/{ticket.ReporterId}/{item.FileName}.{item.Extension}");
-                        System.IO.File.Move(fromPath, toPath);
+                        var fromPath = $"{AppConstants.TicketFilesTempFolder}/{data.CompanyId}/{item.FileName}.{item.Extension}";
+                        var toPath = $"{AppConstants.TicketFilesFolder}/{data.CompanyId}/{ticket.ReporterId}/{item.FileName}.{item.Extension}";
+                        await _s3Service.CopyObjectAsync(fromPath, toPath);
+                        await _s3Service.DeleteObjectAsync(fromPath);
                     }
 
                     dbContext.TicketComments.Add(data.Comment);

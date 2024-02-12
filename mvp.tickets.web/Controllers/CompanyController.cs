@@ -8,6 +8,7 @@ using mvp.tickets.domain.Enums;
 using mvp.tickets.domain.Extensions;
 using mvp.tickets.domain.Helpers;
 using mvp.tickets.domain.Models;
+using mvp.tickets.domain.Services;
 using mvp.tickets.domain.Stores;
 
 namespace mvp.tickets.web.Controllers
@@ -19,12 +20,14 @@ namespace mvp.tickets.web.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly ILogger<CompanyController> _logger;
         private readonly ISettings _settings;
+        private readonly IS3Service _s3Service;
 
-        public CompanyController(ApplicationDbContext dbContext, ILogger<CompanyController> logger, ISettings settings)
+        public CompanyController(ApplicationDbContext dbContext, ILogger<CompanyController> logger, ISettings settings, IS3Service s3Service)
         {
             _dbContext = dbContext;
             _logger = logger;
             _settings = settings;
+            _s3Service = s3Service;
         }
 
         [HttpGet("current")]
@@ -181,14 +184,11 @@ namespace mvp.tickets.web.Controllers
                 {
                     var ext = Path.GetExtension(request.Logo.FileName).Trim('.').ToLower();
                     entry.Logo = $"{entry.Id}.{ext}";
-                    var path = Path.Join(_settings.FilesPath, $"/{AppConstants.LogoFilesFolder}/{entry.Logo}");
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using (var stream = System.IO.File.Create(path))
+                    var fileResult = await _s3Service.PutObjectAsync($"{AppConstants.LogoFilesFolder}/{entry.Logo}", request.Logo.OpenReadStream());
+                    if (fileResult)
                     {
-                        await request.Logo.CopyToAsync(stream);
+                        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                     }
-                    
-                    await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 }
 
                 response = new BaseCommandResponse<string>
@@ -352,11 +352,15 @@ namespace mvp.tickets.web.Controllers
                 {
                     var ext = Path.GetExtension(request.NewLogo.FileName).Trim('.').ToLower();
                     entry.Logo = $"{entry.Id}.{ext}";
-                    var path = Path.Join(_settings.FilesPath, $"/{AppConstants.LogoFilesFolder}/{entry.Logo}");
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using (var stream = System.IO.File.Create(path))
+                    var fileResult = await _s3Service.PutObjectAsync($"{AppConstants.LogoFilesFolder}/{entry.Logo}", request.NewLogo.OpenReadStream());
+                    if (!fileResult)
                     {
-                        await request.NewLogo.CopyToAsync(stream);
+                        return new BaseCommandResponse<ICompanyModel>
+                        {
+                            IsSuccess = false,
+                            Code = ResponseCodes.Error,
+                            ErrorMessage = "Ошибка при сохранении логотипа."
+                        };
                     }
                 }
                 else if (request.RemoveLogo)
