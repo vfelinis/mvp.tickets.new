@@ -1,5 +1,6 @@
 import { Typography } from '@mui/material';
 import { FC } from 'react';
+import { observer } from 'mobx-react-lite';
 import { useRootStore } from '../../Store/RootStore';
 
 interface IHomeViewProps {
@@ -14,4 +15,4 @@ const HomeView: FC<IHomeViewProps> = (props) => {
   </>;
 };
 
-export default HomeView;
+export default observer(HomeView);

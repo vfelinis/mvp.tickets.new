@@ -130,8 +130,8 @@ namespace mvp.tickets.web.Controllers
 
                 var userData = new UserJWTData(email, company.Id, JWTType.Register);
                 var code = TokenHelper.GenerateToken(userData, 30);
-                await emailService.Send(email, $"{company.Name} - регистрация.",
-                    $"Для продолжения регистрации перейдите по следующей ссылке <a href='https://{host}/register/?email={email}&code={code}'>нажмите здесь</a>", true);
+                await emailService.Send(email, $"{company.Name} - registration.",
+                    $"Please use the following link to continue <a href='https://{host}/register/?email={email}&code={code}'>click here</a>", true);
 
                 response = new BaseCommandResponse<bool>
                 {
@@ -666,8 +666,8 @@ namespace mvp.tickets.web.Controllers
 
                 var userData = new UserJWTData(email, company.Id, JWTType.ResetPassword);
                 var code = TokenHelper.GenerateToken(userData, 30);
-                await emailService.Send(email, $"{company.Name} - сброс пароля.",
-                    $"Для сброса пароля перейдите по следующей ссылке <a href='https://{host}/resetPassword/?code={code}'>нажмите здесь</a>", true);
+                await emailService.Send(email, $"{company.Name} - reset password.",
+                    $"Please use the following link to continue <a href='https://{host}/resetPassword/?code={code}'>click here</a>", true);
 
                 response = new BaseCommandResponse<bool>
                 {

@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Minio;
@@ -69,6 +70,10 @@ namespace mvp.tickets.web.Extensions
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(connectionsStrings.DefaultConnection));
+
+            services.AddDataProtection()
+                .PersistKeysToDbContext<ApplicationDbContext>();
+
             services.AddTransient<IUserStore, UserStore>();
             services.AddTransient<ICategoryStore, CategoryStore>();
             services.AddTransient<ICompanyStore, CompanyStore>();

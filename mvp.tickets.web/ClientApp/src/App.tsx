@@ -71,9 +71,7 @@ export const App: FC<IAppProps> = (props) => {
   useEffect(() => {
     document.title = props.company.name;
     store.companyStore.setCurrent(props.company);
-    if (props.user !== null) {
-      store.userStore.setCurrentUser(props.user);
-    }
+    store.userStore.setCurrentUser(props.user);
   }, []);
 
   const mainRoutes = {

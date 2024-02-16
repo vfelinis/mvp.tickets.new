@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using mvp.tickets.data;
+using mvp.tickets.data.Migrations;
 using mvp.tickets.data.Models;
 using mvp.tickets.domain.Constants;
 using mvp.tickets.domain.Enums;
@@ -96,8 +97,8 @@ namespace mvp.tickets.web.Controllers
                 var rootCompany = await _dbContext.Companies.FirstOrDefaultAsync(s => s.IsRoot);
 
                 await emailService.Send(entry.Email,
-                    $"Приглашение в MVP Tickets",
-                    $"Для регистрации предприятия перейдите по следующей ссылке <a href='https://{rootCompany?.Host}/companies/create/?email={entry.Email}&code={entry.Code}'>нажать здесь</a>",
+                    "Invite to MVP Tickets",
+                    $"Please use the following link to continue <a href='https://{rootCompany?.Host}/companies/create/?email={entry.Email}&code={entry.Code}'>click here</a>",
                     isBodyHtml: true);
 
                 response = new BaseCommandResponse<int>

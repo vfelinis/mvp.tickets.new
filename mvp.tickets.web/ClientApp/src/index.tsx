@@ -24,24 +24,38 @@ const init = (company: ICompanyModel | null, user: IUserModel | null) => {
   root.render(element);
 };
 
-axios.get<IBaseQueryResponse<ICompanyModel>>(ApiRoutesHelper.company.current)
+let company: ICompanyModel | null = null;
+let user: IUserModel | null = null;
+
+let companyRequest = axios.get<IBaseQueryResponse<ICompanyModel>>(ApiRoutesHelper.company.current)
   .then(response => {
     if (response.data.isSuccess) {
-      axios.get<IBaseQueryResponse<IUserModel>>(ApiRoutesHelper.user.current)
-        .then(userResponse => {
-          if (userResponse.data.isSuccess) {
-            init(response.data.data, userResponse.data.data);
-          } else {
-            init(response.data.data, null);
-          }
-        })
-        .catch(userError => {
-          init(response.data.data, null);
-        });
+      company = response.data.data;
     } else {
-      init(null, null);
+      company = null;
     }
   })
-  .catch(error => {
-    init(null, null);
+  .catch(err => {
+    console.log(err);
+    company = null;
   });
+
+let userRequest = axios.get<IBaseQueryResponse<IUserModel>>(ApiRoutesHelper.user.current)
+  .then(userResponse => {
+    if (userResponse.data.isSuccess) {
+      user = userResponse.data.data;
+    } else {
+      user = null;
+    }
+  })
+  .catch(err => {
+    console.log(err);
+    user = null;
+  });
+
+Promise.all([companyRequest, userRequest]).then(function(values){
+  init(company, user);
+}).catch(function(err){
+  console.log(err);
+  init(company, user);
+});
